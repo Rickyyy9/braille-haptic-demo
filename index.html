@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#0B5FCC" />
+<title>Braille Haptic — Prototipe Demo</title>
+<meta name="description" content="Prototipe demo aplikasi pembaca buku digital berbasis haptic braille untuk penyandang deafblind." />
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          // Atkinson Hyperlegible: dirancang khusus untuk low-vision / keterbacaan tinggi
+          access: ['"Atkinson Hyperlegible"', 'system-ui', 'sans-serif'],
+          ui: ['Inter', 'system-ui', 'sans-serif'],
+        },
+        colors: {
+          // ==== Token warna (kontras sudah diverifikasi WCAG AA) ====
+          brand: {
+            50:  '#EEF5FF',
+            100: '#D9E8FF',
+            200: '#B7D2FF',
+            300: '#8AB6FF',
+            400: '#5A93F7',
+            500: '#2B7BF3', // aksen terang (jangan untuk teks kecil)
+            600: '#0B5FCC', // PRIMARI aman: putih 5.4:1
+            700: '#094BA3',
+            800: '#0A3D80',
+            900: '#0B2F5E',
+            950: '#071F3F',
+          },
+          ink: {
+            900: '#0B1620', // teks utama di atas putih (17:1)
+            800: '#16242F',
+            700: '#2A3B4D',
+            600: '#3A4B5D',
+            500: '#4A5B6D', // teks sekunder (7:1)
+            400: '#697A8C',
+            300: '#8A99A8',
+          },
+          teal: {
+            700: '#0B6169',
+            600: '#0E7C86', // aksen sekunder aman untuk teks (5.1:1)
+            500: '#1298A3',
+          },
+          ok:   { 700: '#12662F', 600: '#15803D', 500: '#16A34A', 50: '#ECFDF3' },
+          warn: { 700: '#92400E', 600: '#B45309', 500: '#C2410C', 50: '#FFF7ED' },
+          bad:  { 600: '#B91C1C', 50: '#FEF2F2' },
+          line: '#DCE5EF',
+          surface: '#F5F8FC',
+        },
+        // ==== Skala radius terpadu ====
+        borderRadius: {
+          xl:  '0.875rem',
+          '2xl': '1.125rem',
+          '3xl': '1.5rem',
+          '4xl': '2rem',
+        },
+        // ==== Shadow berlapis untuk kedalaman realistis ====
+        boxShadow: {
+          hair:  '0 1px 2px rgba(11,22,32,.06)',
+          sm:    '0 1px 2px rgba(11,22,32,.06), 0 1px 3px rgba(11,22,32,.08)',
+          card:  '0 1px 2px rgba(11,22,32,.05), 0 4px 10px -4px rgba(11,22,32,.10), 0 12px 28px -14px rgba(11,22,32,.16)',
+          lift:  '0 2px 4px rgba(11,22,32,.05), 0 8px 20px -8px rgba(11,22,32,.14), 0 22px 44px -22px rgba(11,22,32,.22)',
+          brand: '0 2px 6px rgba(11,95,204,.22), 0 10px 24px -10px rgba(11,95,204,.42)',
+          inset: 'inset 0 1px 0 rgba(255,255,255,.6)',
+        },
+        backgroundImage: {
+          'sheen': 'linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,0) 60%)',
+        },
+        ringOffsetColor: { DEFAULT: '#ffffff' },
+      },
+    },
+  };
+</script>
+
+<style>
+  :root {
+    color-scheme: light;
+    /* Token motion terpusat */
+    --ease-out: cubic-bezier(.16,.84,.44,1);
+    --ease-spring: cubic-bezier(.2,.9,.3,1.12);
+    --dur-fast: 140ms;
+    --dur-base: 220ms;
+    --dur-slow: 380ms;
+  }
+
+  html, body { height: 100%; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background:
+      radial-gradient(1200px 700px at 15% -10%, #DCE9FF 0%, transparent 60%),
+      radial-gradient(900px 600px at 100% 110%, #D9F1F5 0%, transparent 55%),
+      #E9EFF6;
+    background-attachment: fixed;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    letter-spacing: -0.006em;
+  }
+
+  /* ==== Skala tipografi yang lebih kaya & konsisten ==== */
+  h1, h2, h3 { letter-spacing: -0.021em; }
+  h1 { line-height: 1.14; }
+  p  { line-height: 1.55; }
+  .font-access { letter-spacing: 0.001em; }
+  /* Angka besar pakai tabular biar rapi sejajar */
+  .tabular { font-variant-numeric: tabular-nums; }
+
+  /* Fokus keyboard yang jelas (WCAG 2.4.11) */
+  :focus-visible {
+    outline: 3px solid #0B5FCC;
+    outline-offset: 2px;
+    border-radius: 10px;
+  }
+  .on-dark :focus-visible { outline-color: #FFFFFF; }
+
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+  }
+
+  /* Layar app */
+  .screen { display: none; }
+  .screen.is-active { display: block; }
+
+  /* Toast aksesibilitas — absolut di dalam kartu HP */
+  #a11yToast {
+    position: absolute; left: 50%;
+    transform: translateX(-50%) translateY(180%) scale(.96);
+    bottom: calc(84px + env(safe-area-inset-bottom));
+    z-index: 60; width: max-content; max-width: 92%;
+    opacity: 0; visibility: hidden; pointer-events: none;
+    transition: transform var(--dur-slow) var(--ease-spring),
+                opacity var(--dur-base) ease, visibility var(--dur-base);
+  }
+  #a11yToast.show {
+    transform: translateX(-50%) translateY(0) scale(1);
+    opacity: 1; visibility: visible;
+  }
+
+  /* ==== Kartu surface premium ==== */
+  .surface {
+    background: #fff;
+    border: 1px solid #DCE5EF;
+    box-shadow: 0 1px 2px rgba(11,22,32,.04), 0 1px 3px rgba(11,22,32,.06);
+    transition: border-color var(--dur-fast) var(--ease-out),
+                box-shadow var(--dur-base) var(--ease-out),
+                transform var(--dur-fast) var(--ease-out);
+  }
+  .surface-interactive:hover {
+    border-color: #8AB6FF;
+    box-shadow: 0 2px 4px rgba(11,22,32,.05), 0 10px 22px -10px rgba(11,95,204,.28);
+    transform: translateY(-1px);
+  }
+  .surface-interactive:active { transform: translateY(0) scale(.994); }
+
+  /* Efek kilau di kartu gelap */
+  .sheen { position: relative; overflow: hidden; }
+  .sheen::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,0) 55%);
+  }
+
+  /* ==== Tombol dengan kedalaman ==== */
+  .btn-primary {
+    background: linear-gradient(180deg, #1670E3 0%, #0B5FCC 55%, #0A55B8 100%);
+    box-shadow: 0 1px 1px rgba(255,255,255,.28) inset, 0 1px 2px rgba(11,22,32,.14),
+                0 8px 18px -8px rgba(11,95,204,.5);
+    transition: transform var(--dur-fast) var(--ease-out),
+                box-shadow var(--dur-base) var(--ease-out),
+                filter var(--dur-fast) var(--ease-out);
+  }
+  .btn-primary:hover { filter: brightness(1.05); }
+  .btn-primary:active { transform: translateY(1px) scale(.997); box-shadow: 0 1px 2px rgba(11,22,32,.16); }
+
+  .btn-ghost {
+    transition: background-color var(--dur-fast) var(--ease-out),
+                border-color var(--dur-fast) var(--ease-out),
+                transform var(--dur-fast) var(--ease-out);
+  }
+  .btn-ghost:active { transform: scale(.97); }
+
+  /* Titik tactile braille */
+  .dot {
+    width: 18px; height: 18px; border-radius: 9999px;
+    background: #0B5FCC; opacity: .18;
+    transition: background-color .12s, opacity .12s, transform .12s;
+  }
+  .dot.on { background: #0B5FCC; opacity: 1; transform: scale(1.06); }
+
+  /* Cell braille besar untuk layar Reader */
+  .bdot {
+    width: 34px; height: 34px; border-radius: 9999px;
+    background: rgba(255,255,255,.22);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.14);
+    transition: background-color .16s var(--ease-out),
+                transform .16s var(--ease-spring),
+                box-shadow .16s var(--ease-out);
+  }
+  .bdot.on {
+    background: #FFFFFF; transform: scale(1.12);
+    box-shadow: 0 0 0 4px rgba(255,255,255,.20), 0 4px 10px -3px rgba(0,0,0,.35);
+  }
+  /* Denyut singkat saat titik dibaca */
+  .bdot.tick { animation: dotTick .42s var(--ease-spring); }
+  @keyframes dotTick {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(1.34); }
+    100% { transform: scale(1.12); }
+  }
+
+  /* ==== Animasi masuk layar (stagger) ==== */
+  @keyframes riseIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .rise { animation: riseIn var(--dur-slow) var(--ease-out) both; }
+  .stagger > * { animation: riseIn var(--dur-slow) var(--ease-out) both; }
+  .stagger > *:nth-child(1) { animation-delay: .02s; }
+  .stagger > *:nth-child(2) { animation-delay: .07s; }
+  .stagger > *:nth-child(3) { animation-delay: .12s; }
+  .stagger > *:nth-child(4) { animation-delay: .17s; }
+  .stagger > *:nth-child(5) { animation-delay: .22s; }
+  .stagger > *:nth-child(6) { animation-delay: .27s; }
+  .stagger > *:nth-child(7) { animation-delay: .32s; }
+  .stagger > *:nth-child(8) { animation-delay: .37s; }
+
+  /* Indikator pulse untuk status */
+  @keyframes pulseSoft { 0%,100% { opacity: .5; transform: scale(.9);} 50% { opacity: 1; transform: scale(1.12);} }
+  .pulse { animation: pulseSoft 1.7s ease-in-out infinite; }
+
+  /* Gelombang getaran visual di tombol "Rasakan" */
+  @keyframes hapticRing {
+    0%   { box-shadow: 0 0 0 0 rgba(11,95,204,.55); }
+    100% { box-shadow: 0 0 0 18px rgba(11,95,204,0); }
+  }
+  .ring-pulse { animation: hapticRing 1s var(--ease-out) infinite; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+    .stagger > *, .rise { animation: none !important; opacity: 1 !important; transform: none !important; }
+  }
+
+  /* Mode fokus: sembunyikan konten dekoratif, perbesar kontrol */
+  body.focus-mode .decorative { display: none !important; }
+  body.focus-mode .ui-scale { font-size: 1.14em; }
+  body.focus-mode .surface { border-width: 2px; }
+
+  /* Kartu "hp" di layar besar — bezel lembut */
+  .phone {
+    width: 100%; max-width: 420px; min-height: 640px;
+    background: #fff; border-radius: 34px; overflow: hidden;
+    box-shadow:
+      0 0 0 1px rgba(11,22,32,.05),
+      0 2px 6px rgba(11,22,32,.08),
+      0 24px 48px -20px rgba(11,22,32,.30),
+      0 48px 90px -50px rgba(11,22,32,.40);
+    position: relative;
+  }
+  @media (min-width: 640px) {
+    .phone { border: 8px solid #0B1620; border-radius: 44px; }
+  }
+
+  /* Scrollbar halus di dalam app */
+  #appMain::-webkit-scrollbar { width: 6px; }
+  #appMain::-webkit-scrollbar-thumb { background: #C6D3E3; border-radius: 9999px; }
+  #appMain::-webkit-scrollbar-track { background: transparent; }
+</style>
+</head>
+
+<body>
+
+<!-- ============ LIVE REGION: pembaca layar & umpan balik getaran ============ -->
+<div id="liveRegion" role="status" aria-live="polite" class="sr-only"></div>
+
+<!-- ============ KONTAINER APLIKASI ============ -->
+<div class="min-h-screen flex items-center justify-center p-0 sm:p-6">
+  <div class="phone ui-scale flex flex-col">
+
+    <!-- ---- TOAST (di dalam kartu agar posisinya akurat) ---- -->
+    <div id="a11yToast" role="alert"
+         class="rounded-2xl bg-ink-900 text-white px-4 py-3 text-sm font-semibold shadow-card max-w-[92%] text-center">
+      <span id="a11yToastText"></span>
+    </div>
+
+    <!-- ---- HEADER ATAS (dinamis per layar) ---- -->
+    <header id="appHeader" class="hidden"></header>
+
+    <!-- ---- AREA KONTEN (scroll) ---- -->
+    <main id="appMain" class="flex-1 overflow-y-auto" tabindex="-1"
+          style="padding-bottom: calc(76px + env(safe-area-inset-bottom))">
+      <!-- layar-layar disuntik di sini oleh JS -->
+    </main>
+
+    <!-- ---- BOTTOM NAV ---- -->
+    <nav aria-label="Navigasi utama"
+         class="absolute bottom-0 left-0 right-0 bg-white border-t border-line"
+         style="padding-bottom: env(safe-area-inset-bottom)">
+      <ul id="navList" class="flex items-stretch">
+        <!-- diisi JS -->
+      </ul>
+    </nav>
+
+  </div>
+</div>
+
+<script>
+/* =========================================================================
+   BRAILLE HAPTIC — PROTOTIPE DEMO
+   Bagian 1: Util aksesibilitas + mesin haptic (simulasi Braille via getaran)
+   ========================================================================= */
+
+/* ---------- Util announce ---------- */
+const liveRegion = document.getElementById('liveRegion');
+const toastEl    = document.getElementById('a11yToast');
+const toastText  = document.getElementById('a11yToastText');
+
+function announce(msg, alsoToast = false) {
+  liveRegion.textContent = '';
+  // jeda kecil supaya pembaca layar membacakan ulang pesan yang sama
+  setTimeout(() => { liveRegion.textContent = msg; }, 60);
+  if (alsoToast) showToast(msg);
+}
+
+let toastTimer = null;
+function showToast(msg) {
+  toastText.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2400);
+}
+
+/* ---------- Mode fokus ---------- */
+const focusMode = {
+  get on() { return document.body.classList.contains('focus-mode'); },
+  toggle() {
+    document.body.classList.toggle('focus-mode');
+    const on = this.on;
+    localStorage.setItem('bh_focus', on ? '1' : '0');
+    announce(on
+      ? 'Mode fokus aktif. Animasi dan gambar dekoratif disembunyikan.'
+      : 'Mode fokus nonaktif.',
+      true);
+    // sinkronkan semua tombol toggle
+    document.querySelectorAll('[data-toggle="focus"]').forEach(b => {
+      b.setAttribute('aria-pressed', String(on));
+      const label = b.querySelector('[data-toggle-label]');
+      if (label) label.textContent = on ? 'Aktif' : 'Nonaktif';
+    });
+  },
+  init() {
+    if (localStorage.getItem('bh_focus') === '1') document.body.classList.add('focus-mode');
+    document.querySelectorAll('[data-toggle="focus"]').forEach(b => {
+      b.setAttribute('aria-pressed', String(this.on));
+      const label = b.querySelector('[data-toggle-label]');
+      if (label) label.textContent = this.on ? 'Aktif' : 'Nonaktif';
+    });
+  },
+};
+
+/* =========================================================================
+   MESIN HAPTIC BRAILLE
+   Simulasi pola Braille memakai Vibration API.
+   Catatan: Web Vibration API hanya berfungsi di Android (Chrome/Firefox).
+   Di iOS Safari & desktop, ada fallback visual + pesan.
+   ========================================================================= */
+
+const HAPTIC = {
+  supported: typeof navigator !== 'undefined' && 'vibrate' in navigator,
+  enabled: true,
+
+  /* Pola getaran per titik braille:
+     [getar, jeda, getar, jeda, ...] dalam milidetik.
+     Titik "ada" -> getaran panjang; titik "kosong" -> tidak bergetar. */
+
+  /* 6-titik braille (1-2-3 di kiri, 4-5-6 di kanan) */
+  DOT_COUNT: 6,
+
+  /* Durasi dasar satu "tick" titik braille */
+  tickMs: 90,
+
+  /* Bagian titik braille yang aktif (1-6) untuk sebuah karakter Latin.
+     Ini subset umum; bukan pemetaan lengkap UEB. */
+  letters: {
+    'a': [1], 'b': [1,2], 'c': [1,4], 'd': [1,4,5], 'e': [1,5],
+    'f': [1,2,4], 'g': [1,2,4,5], 'h': [1,2,5], 'i': [2,4], 'j': [2,4,5],
+    'k': [1,3], 'l': [1,2,3], 'm': [1,3,4], 'n': [1,3,4,5], 'o': [1,3,5],
+    'p': [1,2,3,4], 'q': [1,2,3,4,5], 'r': [1,2,3,5], 's': [2,3,4], 't': [2,3,4,5],
+    'u': [1,3,6], 'v': [1,2,3,6], 'w': [2,4,5,6], 'x': [1,3,4,6], 'y': [1,3,4,5,6],
+    'z': [1,3,5,6],
+    ' ': [0], // spasi
+    '.': [2,5,6], ',': [2], '?': [2,3,6], '!': [2,3,5],
+  },
+
+  /* Ubah karakter jadi daftar titik aktif (1-6) */
+  dotsFor(ch) {
+    const k = (ch || '').toLowerCase();
+    return this.letters[k] ?? null;
+  },
+
+  /* Bangun pola vibrasi untuk SATU karakter braille.
+     Alur: [pola getar 6 titik] -> jeda panjang sebagai pemisah karakter */
+  patternForChar(ch, tick = this.tickMs, gap = 150) {
+    const dots = this.dotsFor(ch);
+    if (!dots) return null;
+    // Braille kosong / spasi
+    if (dots[0] === 0) return [tick, 200];
+
+    const pulses = [];
+    for (let i = 1; i <= this.DOT_COUNT; i++) {
+      const active = dots.includes(i);
+      // titik aktif: getar; tidak aktif: getar 0 (dilewati oleh API)
+      pulses.push(active ? tick * 1.6 : 1);
+      // jeda antar titik selalu ada supaya ritme terbaca
+      pulses.push(active ? tick * 0.9 : tick * 0.9);
+    }
+    // pemisah akhir karakter
+    pulses.push(gap);
+    return pulses;
+  },
+
+  /* Getarkan satu karakter */
+  buzzChar(ch) {
+    const { tickMs } = this;
+    const p = this.patternForChar(ch, tickMs);
+    if (!p) return false;
+    if (this.supported && this.enabled) navigator.vibrate(p);
+    return true;
+  },
+
+  /* Putar seluruh kata/kalimat secara berurutan */
+  async buzzText(text, onChar) {
+    const chars = [...text];
+    for (let i = 0; i < chars.length; i++) {
+      if (this._stop) break;
+      const ch = chars[i];
+      const ok = this.buzzChar(ch);
+      if (onChar) onChar(i, ch, ok);
+      const dur = (this.patternForChar(ch) || [0]).reduce((a, b) => a + b, 0);
+      await this._sleep(Math.min(dur + 40, 900));
+    }
+    this._stop = false;
+  },
+
+  stop() { this._stop = true; if (this.supported) navigator.vibrate(0); },
+  _stop: false,
+  _sleep: (ms) => new Promise(r => setTimeout(r, ms)),
+};
+</script>
+
+<!-- Modul layar + bootstrap (diisi di file berikutnya) -->
+<script src="app.js"></script>
+</body>
+</html>

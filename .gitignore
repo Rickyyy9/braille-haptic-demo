@@ -1,0 +1,20 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+
+# Log
+*.log
+npm-debug.log*
+
+# Editor
+.vscode/
+.idea/
+*.code-workspace
+
+# Node (kalau nanti menambah build step)
+node_modules/
+dist/
+.cache/
