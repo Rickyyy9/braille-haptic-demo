@@ -720,6 +720,52 @@ function renderReader() {
           Next ${svg('next', 'w-3.5 h-3.5')}
         </button>
       </div>
+
+      <!-- Tombol buka pengaturan kecepatan & jeda -->
+      <button type="button" id="btnTune" aria-expanded="false" aria-controls="tunePanel"
+              class="w-full min-h-[40px] rounded-xl bg-white/10 border border-white/20
+                     text-white font-bold text-[11.5px] flex items-center justify-center gap-1.5
+                     hover:bg-white/20 active:bg-white/25 transition-colors">
+        ${svg('gear', 'w-3.5 h-3.5')} Atur Kecepatan &amp; Jeda
+      </button>
+    </div>
+
+    <!-- ===== PANEL PENGATURAN (tersembunyi, muncul dari bawah) ===== -->
+    <div id="tunePanel" class="hidden px-4 pb-2 pt-1">
+      <div class="rounded-2xl bg-white/10 border border-white/20 p-3.5 space-y-3">
+        <div>
+          <div class="flex items-center justify-between">
+            <label for="tuneGap" class="text-[11.5px] font-bold text-white">Jeda antar huruf</label>
+            <span class="text-[11.5px] font-bold text-white/90 tabular"><span id="tuneGapVal">420</span> ms</span>
+          </div>
+          <input id="tuneGap" type="range" min="100" max="1200" step="20" value="420"
+                 class="mt-2 w-full accent-white" aria-describedby="tuneGapHelp" />
+          <div class="flex justify-between text-[10px] text-white/60 mt-1" id="tuneGapHelp">
+            <span>Cepat</span><span>Sedang</span><span>Lambat</span>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between">
+            <label for="tuneTick" class="text-[11.5px] font-bold text-white">Durasi tiap titik</label>
+            <span class="text-[11.5px] font-bold text-white/90 tabular"><span id="tuneTickVal">90</span> ms</span>
+          </div>
+          <input id="tuneTick" type="range" min="50" max="220" step="10" value="90"
+                 class="mt-2 w-full accent-white" />
+        </div>
+
+        <div class="flex gap-2">
+          <button type="button" id="btnTuneTest"
+                  class="btn-ghost flex-1 min-h-[40px] rounded-xl bg-white text-brand-700 font-bold text-[12px]">
+            Uji Getaran
+          </button>
+          <button type="button" id="btnTuneReset"
+                  class="btn-ghost flex-1 min-h-[40px] rounded-xl bg-white/15 border border-white/25 text-white font-bold text-[12px]">
+            Kembalikan
+          </button>
+        </div>
+        <p class="text-[10.5px] text-white/70 text-center">Pengaturan ini langsung tersimpan di perangkat.</p>
+      </div>
     </div>
   </div>`;
 }
@@ -1645,6 +1691,11 @@ function go(screen) {
   render();
   main.scrollTop = 0;
   main.focus({ preventScroll: true });
+  // Sinkronkan URL hash agar tiap layar punya deep-link (mis. #dashboard).
+  // Berguna untuk impor ke Figma satu URL per layar.
+  if (location.hash.slice(1) !== screen) {
+    history.replaceState({ screen }, '', '#' + screen);
+  }
   announce(SCREENS[screen].title ? `Layar ${SCREENS[screen].title}` : 'Layar Beranda');
 }
 
@@ -2293,12 +2344,16 @@ function bindReaderEvents() {
     previewChar(readerIdx, status);
   });
 
+  /* ---- Panel pengaturan kecepatan & jeda ---- */
+  bindTunePanel();
+
   /* ---- Tombol Play / Auto Baca ---- */
   const play = main.querySelector('#btnPlay');
   const playIcon = main.querySelector('#playIcon');
   const playLabel = main.querySelector('#playLabel');
 
   async function startAutoRead() {
+    HAPTIC._stop = false;               // mulai sesi baru
     readerAutoPlaying = true;
     play.setAttribute('aria-pressed', 'true');
     playIcon.innerHTML = svg('pause', 'w-5 h-5');
@@ -2345,13 +2400,16 @@ function bindReaderEvents() {
     play.style.color = '#0B5FCC';
   }
 
-  play.addEventListener('click', () => {
+  /* Toggle mulai/jeda — dipakai tombol & gestur tap */
+  function togglePlay() {
     if (readerAutoPlaying) stopAutoRead();
     else startAutoRead();
-  });
+  }
+
+  play.addEventListener('click', togglePlay);
 
   /* ---- Gestur Swipe ---- */
-  bindReaderGestures(status, stopAutoRead);
+  bindReaderGestures(status, stopAutoRead, togglePlay);
 }
 
 function refreshReaderUI() {
@@ -2392,7 +2450,7 @@ function highlightCell(idx) {
   }
 }
 
-function bindReaderGestures(status, onStop) {
+function bindReaderGestures(status, onStop, onToggle) {
   const el = main.querySelector('#readerImmersive');
   if (!el) return;
 
@@ -2400,8 +2458,7 @@ function bindReaderGestures(status, onStop) {
   let startX = 0, startY = 0;
   let startTime = 0;
   let fingers = 0;
-  let tapCount = 0;
-  let tapTimer = null;
+  let lastTapAt = 0;
   let longPressTimer = null;
   let didLongPress = false;
   let mouseDown = false;
@@ -2491,15 +2548,15 @@ function bindReaderGestures(status, onStop) {
       return;
     }
 
-    /* --- tap --- */
-    if (absDx < 15 && absDy < 15 && dt < 500) {
-      tapCount++;
-      clearTimeout(tapTimer);
-      tapTimer = setTimeout(() => {
-        if (tapCount === 1) main.querySelector('#btnPlay')?.click();
-        else if (tapCount >= 2) repeatWord();
-        tapCount = 0;
-      }, 280);
+    /* --- tap (1 sentuh): SELALU mulai/jeda --- */
+    if (absDx < 20 && absDy < 20 && dt < 600) {
+      // Debounce sangat pendek hanya untuk mencegah tap ganda tak sengaja
+      // (mis. jari memantul). Semua tap lain = toggle mulai/jeda.
+      const now = Date.now();
+      if (now - lastTapAt < 180) return;   // abaikan pantulan < 180ms
+      lastTapAt = now;
+      if (onToggle) onToggle();
+      vibrate([14]);
     }
   }
 
@@ -2511,7 +2568,7 @@ function bindReaderGestures(status, onStop) {
     fingers = e.touches.length;
     didLongPress = false;
     clearTimeout(longPressTimer);
-    longPressTimer = setTimeout(() => { didLongPress = true; saveBookmark(); }, 650);
+    longPressTimer = setTimeout(() => { didLongPress = true; saveBookmark(); }, 800);
   }, { passive: true });
 
   el.addEventListener('touchend', (e) => {
@@ -2543,7 +2600,7 @@ function bindReaderGestures(status, onStop) {
     clearTimeout(longPressTimer);
     longPressTimer = setTimeout(() => {
       if (mouseDown && !mouseMoved) { didLongPress = true; saveBookmark(); }
-    }, 650);
+    }, 800);
     e.preventDefault(); // cegah seleksi teks
   });
 
@@ -2567,6 +2624,69 @@ function bindReaderGestures(status, onStop) {
   el.addEventListener('mouseleave', () => {
     mouseDown = false;
     clearTimeout(longPressTimer);
+  });
+}
+
+/* Panel pengaturan kecepatan & jeda pada Reader.
+   Menyimpan ke localStorage agar bertahan antar sesi. */
+function bindTunePanel() {
+  const panel = main.querySelector('#tunePanel');
+  const btnTune = main.querySelector('#btnTune');
+  const gapInput = main.querySelector('#tuneGap');
+  const tickInput = main.querySelector('#tuneTick');
+  const gapVal = main.querySelector('#tuneGapVal');
+  const tickVal = main.querySelector('#tuneTickVal');
+  if (!panel || !btnTune) return;
+
+  // Muat nilai tersimpan
+  const savedGap = parseInt(localStorage.getItem('bh_letter_gap') || '', 10);
+  const savedTick = parseInt(localStorage.getItem('bh_tick_ms') || '', 10);
+  if (!isNaN(savedGap)) HAPTIC.letterGapMs = savedGap;
+  if (!isNaN(savedTick)) HAPTIC.tickMs = savedTick;
+  gapInput.value = HAPTIC.letterGapMs;
+  tickInput.value = HAPTIC.tickMs;
+  gapVal.textContent = HAPTIC.letterGapMs;
+  tickVal.textContent = HAPTIC.tickMs;
+
+  // Buka/tutup panel
+  btnTune.addEventListener('click', () => {
+    const open = panel.classList.toggle('hidden') === false;
+    btnTune.setAttribute('aria-expanded', String(open));
+  });
+
+  // Slider jeda antar huruf
+  gapInput.addEventListener('input', () => {
+    HAPTIC.letterGapMs = +gapInput.value;
+    gapVal.textContent = gapInput.value;
+    localStorage.setItem('bh_letter_gap', gapInput.value);
+  });
+
+  // Slider durasi tick
+  tickInput.addEventListener('input', () => {
+    HAPTIC.tickMs = +tickInput.value;
+    tickVal.textContent = tickInput.value;
+    localStorage.setItem('bh_tick_ms', tickInput.value);
+  });
+
+  // Uji getaran: getarkan 3 huruf berurutan dengan pengaturan saat ini
+  main.querySelector('#btnTuneTest')?.addEventListener('click', async () => {
+    announce('Menguji getaran dengan pengaturan saat ini.', true);
+    await HAPTIC.buzzText('ABC', (i, ch) => {
+      drawBraille(ch.toUpperCase(), true);
+      highlightCell(i);
+    });
+  });
+
+  // Kembalikan ke pengaturan awal
+  main.querySelector('#btnTuneReset')?.addEventListener('click', () => {
+    HAPTIC.letterGapMs = 420;
+    HAPTIC.tickMs = 90;
+    gapInput.value = 420; gapVal.textContent = 420;
+    tickInput.value = 90; tickVal.textContent = 90;
+    localStorage.setItem('bh_letter_gap', '420');
+    localStorage.setItem('bh_tick_ms', '90');
+    vibrate([20, 50, 20]);
+    announce('Pengaturan dikembalikan ke awal.', true);
   });
 }
 
@@ -2665,8 +2785,41 @@ function bindPracticeEvents() {
 function boot() {
   focusMode.init();
 
+  // ==== MODE SCREENSHOT (untuk ekspor ke Figma) ====
+  // ?shot=1 -> render SATU layar bersih di halaman kosong (tanpa chrome HP
+  //            desktop, tanpa background samping) supaya screenshot rapi.
+  // ?shot=1&center=1 -> frame 360px di TENGAH halaman. Berguna untuk capture
+  //            via browser extension (html.to.design) agar lebar selalu pas
+  //            360px walau jendela browser lebar.
+  const params = new URLSearchParams(location.search);
+  const isShot = params.get('shot') === '1';
+  const centered = params.get('center') === '1';
+  const hash = location.hash.slice(1);
+
+  if (isShot) {
+    if (hash === 'grid') { renderGrid(); return; }
+    renderShot(hash || 'home', centered);
+    return;
+  }
+
+  // ==== DEEP-LINK / MODE IMPOR FIGMA ====
+  // #grid  -> tampilkan SEMUA layar sekaligus (satu halaman untuk impor Figma)
+  // #nama  -> langsung buka layar tsb (mis. #dashboard)
+  if (hash === 'grid') { renderGrid(); return; }
+
+  // Peta layar yang butuh state khusus agar tampil utuh saat dibuka langsung
+  if (hash && SCREENS[hash]) {
+    if (hash === 'reader') { openBook(STATE.book.title); }
+    STATE.screen = hash;
+    render();
+    main.scrollTop = 0;
+    history.replaceState({ screen: hash }, '', '#' + hash);
+    return;
+  }
+
   STATE.screen = 'splash';
   render();
+  history.replaceState({ screen: 'splash' }, '', '#splash');
 
   // Haptic lembut saat splash muncul (beri tahu pengguna app siap)
   setTimeout(() => vibrate(ANIM_HAPTIC.splash), 500);
@@ -2680,12 +2833,102 @@ function boot() {
     }
   }, 2100);
 
-  history.replaceState({ screen: 'splash' }, '');
   window.addEventListener('popstate', (e) => {
     STATE.screen = (e.state && e.state.screen) || 'splash';
     render();
     main.scrollTop = 0;
   });
+}
+
+/* -------------------------------------------------------------------------
+   MODE SCREENSHOT — ?shot=1#namaLayar
+   Merender TEPAT SATU layar sebagai frame bersih tanpa chrome aplikasi HP,
+   tanpa background body. Hasilnya screenshot pas untuk dimasukkan ke Figma.
+
+   Ukuran frame: 360 x 680 (konsisten dengan kartu HP di app asli).
+   Chrome headless men-screenshot viewport; ukuran viewport diatur 360x680.
+   ------------------------------------------------------------------------- */
+function renderShot(screenId, centered = false) {
+  if (!SCREENS[screenId]) screenId = 'home';
+
+  // Beberapa layar butuh state khusus agar tampil utuh
+  if (screenId === 'reader') { openBook(STATE.book.title); }
+  STATE.screen = screenId;
+
+  // Ambil HTML layar
+  let html = '';
+  try {
+    html = SCREENS[screenId].render();
+  } catch (err) {
+    html = `<div style="padding:16px;color:#B91C1C;font-size:12px">Gagal render: ${screenId}<br>${err && err.message}</div>`;
+  }
+
+  const fullBleed = ['splash', 'login', 'signup'].includes(screenId);
+
+  // Ganti SELURUH isi body dengan frame bersih
+  document.body.className = centered ? 'shot-body shot-center' : 'shot-body';
+  document.body.innerHTML = `
+    <div class="shot-frame" data-screen="${screenId}">
+      <div class="shot-scroll ${fullBleed ? 'shot-fill' : ''}">
+        <div class="${fullBleed ? 'screen-fill' : ''}">${html}</div>
+      </div>
+    </div>`;
+
+  // Panggil binder event supaya kontrol interaktif tetap ter-endow (opsional)
+  try {
+    if (typeof bindScreenEvents === 'function') bindScreenEvents();
+  } catch (e) { /* diabaikan di mode screenshot */ }
+}
+
+/* -------------------------------------------------------------------------
+   MODE IMPOR FIGMA — #grid
+   Menampilkan SEMUA layar sebagai frame berdampingan dalam satu halaman.
+   Dipakai untuk mengimpor seluruh desain ke Figma lewat html.to.design
+   dalam sekali jalan (satu URL), tanpa klik navigasi satu per satu.
+   ------------------------------------------------------------------------- */
+function renderGrid() {
+  document.body.classList.add('import-grid');
+
+  // Layar tambahan yang sebelumnya adalah sub-state
+  const EXTRA = [
+    { id: 'lesson',  render: () => renderLesson() },
+  ];
+
+  // Siapkan urutan layar
+  const ORDER = [
+    'splash', 'login', 'signup', 'home', 'dashboard', 'reader',
+    'practice', 'gesture', 'contacts', 'companion', 'upload', 'profile',
+    'test', 'lesson',
+  ];
+
+  // Layar yang butuh state (buku) agar tampil utuh
+  const savedScreen = STATE.screen;
+
+  const frames = ORDER.map(id => {
+    let html = '';
+    try {
+      if (id === 'reader') { openBook(STATE.book.title); }
+      const def = SCREENS[id];
+      html = def ? def.render() : '';
+    } catch (err) {
+      html = `<div style="padding:16px;color:#B91C1C;font-size:12px">Gagal render: ${id}<br>${err && err.message}</div>`;
+    }
+    const fullBleed = ['splash', 'login', 'signup'].includes(id);
+    return `
+      <section class="import-frame" data-screen="${id}">
+        <header class="import-frame-label">${id}</header>
+        <div class="import-frame-body ${fullBleed ? 'import-frame-fill' : ''}">
+          <div class="${fullBleed ? 'screen-fill' : ''}">${html}</div>
+        </div>
+      </section>`;
+  }).join('');
+
+  STATE.screen = savedScreen;
+
+  document.getElementById('appMain').innerHTML = `<div class="import-grid-wrap">${frames}</div>`;
+  document.getElementById('appHeader').className = 'hidden';
+  document.getElementById('navList').innerHTML = '';
+  document.getElementById('appHeader').innerHTML = '';
 }
 
 boot();

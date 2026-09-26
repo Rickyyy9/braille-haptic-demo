@@ -786,6 +786,144 @@
   #appMain:has(#readerImmersive) {
     padding-bottom: 0 !important;
   }
+
+  /* ==== MODE SCREENSHOT (?shot=1) ====
+     Merender satu layar sebagai frame bersih (360x680) untuk screenshot Figma.
+     Menggantikan seluruh body, jadi tidak ada offset/background samping. */
+  body.shot-body {
+    margin: 0;
+    padding: 0;
+    display: block;
+    background: #fff;
+    overflow: hidden;
+  }
+  /* Mode terpusat: frame 360px di tengah, background netral.
+     Dipakai untuk capture via browser extension html.to.design. */
+  body.shot-body.shot-center {
+    background: #E9EFF6;
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 24px 0;
+    overflow: visible;
+  }
+  body.shot-body.shot-center .shot-frame {
+    box-shadow: 0 0 0 1px rgba(11,22,32,.06), 0 24px 48px -24px rgba(11,22,32,.35);
+    border-radius: 24px;
+    overflow: visible;
+    flex-shrink: 0;
+  }
+  body.shot-body.shot-center .shot-scroll { overflow: visible; }
+  .shot-frame {
+    width: 360px;
+    min-height: 720px;      /* tinggi minimum ala HP; konten panjang tetap memanjang */
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+  }
+  .shot-scroll {
+    flex: 1 1 auto;
+    position: relative;
+    overflow: visible;
+    display: flex;
+    flex-direction: column;
+  }
+  .shot-fill { display: flex; flex-direction: column; flex: 1 1 auto; }
+  .shot-scroll > div { min-height: 100%; flex: 1 1 auto; display: flex; flex-direction: column; }
+
+  /* Matikan animasi masuk agar screenshot final & bersih */
+  body.shot-body .rise,
+  body.shot-body .stagger > *,
+  body.shot-body .screen-fade,
+  body.shot-body .splash-screen .brand-app-icon,
+  body.shot-body .splash-screen .braille-dot,
+  body.shot-body .splash-screen .brand-subtitle,
+  body.shot-body .splash-screen .brand-title,
+  body.shot-body .splash-screen .loading-bar,
+  body.shot-body .login-screen .login-card,
+  body.shot-body .login-screen .login-header,
+  body.shot-body .login-screen .input-wrap,
+  body.shot-body .login-screen .helper-row,
+  body.shot-body .login-screen .divider,
+  body.shot-body .login-screen .login-actions {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  /* ==== MODE IMPOR FIGMA (#grid) ====
+     Menampilkan semua layar berdampingan dalam satu halaman supaya bisa
+     diimpor ke Figma sekaligus lewat html.to.design. */
+  body.import-grid {
+    display: block;
+    background: #E9EFF6;
+    align-items: initial;
+    justify-content: initial;
+  }
+  body.import-grid .phone {
+    width: auto; max-width: none; height: auto; max-height: none; min-height: 0;
+    border: 0; border-radius: 0; box-shadow: none; overflow: visible;
+    background: transparent;
+  }
+  body.import-grid > .min-h-screen { min-height: 0; padding: 0; display: block; }
+  body.import-grid #appMain { overflow: visible; padding-bottom: 0 !important; }
+  body.import-grid #appHeader,
+  body.import-grid nav[aria-label="Navigasi utama"] { display: none !important; }
+
+  .import-grid-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 28px;
+    padding: 28px;
+    align-items: flex-start;
+  }
+  .import-frame {
+    background: #fff;
+    border-radius: 30px;
+    padding: 0;
+    width: 360px;
+    overflow: hidden;
+    box-shadow: 0 0 0 1px rgba(11,22,32,.06), 0 10px 30px -16px rgba(11,22,32,.35);
+    display: flex;
+    flex-direction: column;
+  }
+  .import-frame-label {
+    font: 700 12px/1 'Inter', system-ui, sans-serif;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: #0B5FCC;
+    background: #EEF5FF;
+    padding: 10px 14px;
+    border-bottom: 1px solid #DCE5EF;
+  }
+  .import-frame-body {
+    height: 680px;
+    overflow: hidden;
+    position: relative;
+  }
+  .import-frame-fill { display: block; }
+  .import-frame-body > div { min-height: 100%; }
+  /* Matikan animasi masuk supaya screenshot/import bersih & final */
+  body.import-grid .rise,
+  body.import-grid .stagger > *,
+  body.import-grid .screen-fade,
+  body.import-grid #appMain > .screen-fade,
+  body.import-grid .splash-screen .brand-app-icon,
+  body.import-grid .splash-screen .braille-dot,
+  body.import-grid .splash-screen .brand-subtitle,
+  body.import-grid .splash-screen .brand-title,
+  body.import-grid .splash-screen .loading-bar,
+  body.import-grid .login-screen .login-card,
+  body.import-grid .login-screen .login-header,
+  body.import-grid .login-screen .input-wrap,
+  body.import-grid .login-screen .helper-row,
+  body.import-grid .login-screen .divider,
+  body.import-grid .login-screen .login-actions {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
 </style>
 </head>
 
@@ -903,6 +1041,12 @@ const HAPTIC = {
   /* Durasi dasar satu "tick" titik braille */
   tickMs: 90,
 
+  /* Jeda ekstra ANTAR HURUF (milidetik). Makin besar, makin lambat & jelas. */
+  letterGapMs: 420,
+
+  /* Jeda antar titik di dalam satu karakter */
+  dotGapMs: 80,
+
   /* Bagian titik braille yang aktif (1-6) untuk sebuah karakter Latin.
      Ini subset umum; bukan pemetaan lengkap UEB. */
   letters: {
@@ -930,7 +1074,7 @@ const HAPTIC = {
 
   /* Bangun pola vibrasi untuk SATU karakter braille.
      Alur: [pola getar 6 titik] -> jeda panjang sebagai pemisah karakter */
-  patternForChar(ch, tick = this.tickMs, gap = 150) {
+  patternForChar(ch, tick = this.tickMs, gap = this.dotGapMs) {
     const dots = this.dotsFor(ch);
     if (!dots) return null;
     // Braille kosong / spasi
@@ -942,10 +1086,8 @@ const HAPTIC = {
       // titik aktif: getar; tidak aktif: getar 0 (dilewati oleh API)
       pulses.push(active ? tick * 1.6 : 1);
       // jeda antar titik selalu ada supaya ritme terbaca
-      pulses.push(active ? tick * 0.9 : tick * 0.9);
+      pulses.push(gap);
     }
-    // pemisah akhir karakter
-    pulses.push(gap);
     return pulses;
   },
 
@@ -958,22 +1100,30 @@ const HAPTIC = {
     return true;
   },
 
-  /* Putar seluruh kata/kalimat secara berurutan */
-  async buzzText(text, onChar) {
+  /* Putar seluruh kata/kalimat secara berurutan.
+     `gapMs` = jeda ekstra antar huruf (default: letterGapMs).
+     Memakai token generasi (`gen`) agar stop() benar-benar menghentikan
+     semua pemutaran, termasuk yang sedang menunggu jeda. */
+  async buzzText(text, onChar, gapMs = this.letterGapMs) {
+    const myGen = ++this._gen;          // token sesi ini
     const chars = [...text];
     for (let i = 0; i < chars.length; i++) {
-      if (this._stop) break;
+      if (this._stop || myGen !== this._gen) return;   // dihentikan / sudah usang
       const ch = chars[i];
       const ok = this.buzzChar(ch);
       if (onChar) onChar(i, ch, ok);
       const dur = (this.patternForChar(ch) || [0]).reduce((a, b) => a + b, 0);
-      await this._sleep(Math.min(dur + 40, 900));
+      await this._sleep(dur + gapMs);
     }
-    this._stop = false;
   },
 
-  stop() { this._stop = true; if (this.supported) navigator.vibrate(0); },
+  stop() {
+    this._stop = true;
+    this._gen++;                        // batalkan semua sesi berjalan
+    if (this.supported) navigator.vibrate(0);
+  },
   _stop: false,
+  _gen: 0,
   _sleep: (ms) => new Promise(r => setTimeout(r, ms)),
 
   /* =====================================================================

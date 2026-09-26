@@ -1,0 +1,24 @@
+{
+  "name": "braille-haptic-demo",
+  "version": "1.0.0",
+  "description": "Prototipe demo aplikasi pembaca buku digital berbasis **haptic braille** untuk penyandang **deafblind** (tuli-buta).",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Rickyyy9/braille-haptic-demo.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Rickyyy9/braille-haptic-demo/issues"
+  },
+  "homepage": "https://github.com/Rickyyy9/braille-haptic-demo#readme",
+  "devDependencies": {
+    "playwright": "^1.63.0"
+  }
+}
