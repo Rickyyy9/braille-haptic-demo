@@ -71,6 +71,30 @@ Tanpa dependensi, tanpa `npm install`, tanpa framework. Cukup buka di browser.
 └── README.md
 ```
 
+## Alur Aplikasi
+
+1. **Splash** — logo + animasi titik braille menyala berurutan (disertai haptic)
+2. **Login** — layar masuk untuk pendamping/fasilitator
+3. **Home** — profil pengguna + menu utama
+4. **Dashboard** — kartu buku, menu cepat, buku terakhir
+5. **Reader** — tampilan braille imersif dengan kontrol gestur
+6. **Latihan Braille** — modul & kuis
+7. **Peta Gestur** — pola huruf A–Z
+
+### Catatan tentang Login (Demo)
+
+Pada prototipe ini, halaman login **tidak terhubung ke backend apa pun** — isi email
+dan password apa saja, lalu tekan Masuk untuk melanjutkan. Ini murni untuk
+menampilkan alur UI.
+
+**Rencana pengembangan autentikasi:**
+
+- Login diperuntukkan bagi **pendamping/fasilitator** yang mendampingi pengguna.
+- Untuk **pengguna deafblind**, hindari autentikasi berbasis mengetik password
+  (sulit diakses). Gunakan **passkey / biometrik / kode sentuh** sesuai
+  pedoman WCAG 2.2 *Accessible Authentication* — jangan memaksa tes kognitif.
+- Autentikasi produksi memerlukan backend (misalnya Supabase/Firebase atau server sendiri).
+
 ## Cara Kerja Mesin Haptic
 
 Setiap karakter Latin dipetakan ke kumpulan titik braille (1–6). Contoh:

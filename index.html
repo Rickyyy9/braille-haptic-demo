@@ -337,6 +337,46 @@
     padding: 32px 20px;
   }
 
+  /* ===== ANIMASI SPLASH (elegant) ===== */
+  /* Ikon app: muncul dengan skala + settle lembut */
+  @keyframes splashIconIn {
+    0%   { opacity: 0; transform: scale(.72) translateY(10px); }
+    60%  { opacity: 1; transform: scale(1.06) translateY(0); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .splash-screen .brand-app-icon {
+    animation: splashIconIn .72s var(--ease-spring) both;
+  }
+
+  /* Titik braille menyala berurutan (satu per satu) */
+  @keyframes dotGlowIn {
+    0%   { opacity: 0; transform: scale(.4); }
+    70%  { opacity: 1; transform: scale(1.28); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+  .splash-screen .braille-dot {
+    animation: dotGlowIn .42s var(--ease-spring) both;
+  }
+  /* Stagger: 9 titik, delay bertahap mulai 300ms */
+  .splash-screen .braille-dot:nth-child(1) { animation-delay: .30s; }
+  .splash-screen .braille-dot:nth-child(2) { animation-delay: .36s; }
+  .splash-screen .braille-dot:nth-child(3) { animation-delay: .42s; }
+  .splash-screen .braille-dot:nth-child(4) { animation-delay: .48s; }
+  .splash-screen .braille-dot:nth-child(5) { animation-delay: .54s; }
+  .splash-screen .braille-dot:nth-child(6) { animation-delay: .60s; }
+  .splash-screen .braille-dot:nth-child(7) { animation-delay: .66s; }
+  .splash-screen .braille-dot:nth-child(8) { animation-delay: .72s; }
+  .splash-screen .braille-dot:nth-child(9) { animation-delay: .78s; }
+
+  /* Teks & bar: fade-up bertahap */
+  @keyframes splashFadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .splash-screen .brand-subtitle { animation: splashFadeUp .56s var(--ease-out) both; animation-delay: .58s; }
+  .splash-screen .brand-title    { animation: splashFadeUp .56s var(--ease-out) both; animation-delay: .68s; }
+  .splash-screen .loading-bar    { animation: splashFadeUp .56s var(--ease-out) both; animation-delay: .82s; }
+
   .splash-screen .brand-title {
     margin-top: 20px;
     font-size: 2rem;
@@ -435,26 +475,45 @@
     font-weight: 700;
     letter-spacing: .08em;
     text-transform: uppercase;
-    color: rgba(11,22,32,.62);
+    color: rgba(11,22,32,.72);
   }
 
-  .input-wrap input {
+  .input-wrap input,
+  .input-wrap textarea,
+  .input-wrap select {
     width: 100%;
-    border: 1px solid rgba(11,95,204,.15);
+    border: 1.5px solid #C6D8EC;
     background: #F7FAFF;
     color: #0B1620;
     border-radius: 14px;
     min-height: 48px;
-    padding: 0 14px;
+    padding: 12px 14px;
     font-size: 1rem;
+    font-family: inherit;
     outline: none;
     transition: border-color .2s ease, box-shadow .2s ease;
   }
 
-  .input-wrap input:focus {
-    border-color: rgba(11,95,204,.72);
-    box-shadow: 0 0 0 3px rgba(11,95,204,.12);
+  /* Select: panah kustom + padding kanan lebih */
+  .input-wrap select {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 42px;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%230B5FCC' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
   }
+
+  .input-wrap input:focus,
+  .input-wrap textarea:focus,
+  .input-wrap select:focus {
+    border-color: #0B5FCC;
+    box-shadow: 0 0 0 3px rgba(11,95,204,.14);
+  }
+
+  .input-wrap input::placeholder,
+  .input-wrap textarea::placeholder { color: #667586; }
 
   .login-actions {
     display: flex;
@@ -482,6 +541,35 @@
     background: #EEF5FF;
     color: #0B5FCC;
     border: 1px solid rgba(11,95,204,.14);
+  }
+
+  /* Catatan kecil khusus demo di bawah tombol login */
+  .login-note {
+    margin-top: 14px;
+    text-align: center;
+    font-size: .72rem;
+    line-height: 1.5;
+    color: rgba(11,22,32,.55);
+  }
+
+  .login-note .note-link {
+    color: #0B5FCC;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .login-note .note-link:hover { text-decoration: underline; }
+
+  /* Pesan error form pendaftaran (teks, bukan hanya warna) */
+  .form-error {
+    margin-top: 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(185,28,28,.25);
+    background: #FEF2F2;
+    color: #B91C1C;
+    font-size: .78rem;
+    font-weight: 600;
+    line-height: 1.45;
+    padding: 10px 12px;
   }
 
   .helper-row {
@@ -517,6 +605,72 @@
     height: 1px;
     background: rgba(11,22,32,.12);
   }
+
+  /* ===== ANIMASI LOGIN (elegant) ===== */
+  /* Kartu login: naik + memudar masuk */
+  @keyframes loginCardIn {
+    from { opacity: 0; transform: translateY(22px) scale(.985); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .login-screen .login-card { animation: loginCardIn .6s var(--ease-out) both; }
+
+  /* Header, field, aksi: masuk berurutan (stagger) */
+  @keyframes loginItemIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .login-screen .login-header { animation: loginItemIn .5s var(--ease-out) both; animation-delay: .10s; }
+  .login-screen .input-wrap:nth-of-type(1) { animation: loginItemIn .5s var(--ease-out) both; animation-delay: .20s; }
+  .login-screen .input-wrap:nth-of-type(2) { animation: loginItemIn .5s var(--ease-out) both; animation-delay: .28s; }
+  .login-screen .helper-row { animation: loginItemIn .5s var(--ease-out) both; animation-delay: .36s; }
+  .login-screen .divider    { animation: loginItemIn .5s var(--ease-out) both; animation-delay: .42s; }
+  .login-screen .login-actions { animation: loginItemIn .5s var(--ease-out) both; animation-delay: .50s; }
+
+  /* Tombol Masuk: keadaan loading (spinner) & sukses (centang) */
+  .login-btn.primary { position: relative; }
+  .login-btn .btn-label { transition: opacity .18s ease; }
+  .login-btn.is-loading .btn-label { opacity: 0; }
+
+  .btn-spinner {
+    position: absolute; top: 50%; left: 50%;
+    width: 20px; height: 20px; margin: -10px 0 0 -10px;
+    border-radius: 9999px;
+    border: 2.5px solid rgba(255,255,255,.35);
+    border-top-color: #fff;
+    opacity: 0;
+    animation: spin .7s linear infinite;
+  }
+  .login-btn.is-loading .btn-spinner { opacity: 1; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Saat sukses: tombol jadi hijau + centang */
+  .login-btn.is-success {
+    background: linear-gradient(180deg, #15803D 0%, #12662F 100%);
+    box-shadow: 0 12px 22px -14px rgba(18,102,47,.9);
+  }
+  .btn-check {
+    position: absolute; top: 50%; left: 50%;
+    width: 24px; height: 24px; margin: -12px 0 0 -12px;
+    color: #fff; opacity: 0;
+  }
+  .login-btn.is-success .btn-spinner { opacity: 0; animation: none; }
+  .login-btn.is-success .btn-check { opacity: 1; animation: loginItemIn .3s var(--ease-spring) both; }
+
+  /* Flash layar penuh saat login sukses (transisi ke Home) */
+  .screen-flash {
+    position: absolute; inset: 0; z-index: 80;
+    background: #0B5FCC; opacity: 0; pointer-events: none;
+    transition: opacity .34s ease;
+  }
+  .screen-flash.on { opacity: 1; }
+
+  /* Halaman (screen) transisi masuk saat render ulang */
+  @keyframes screenFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  #appMain > .screen-fade { animation: screenFadeIn .3s ease both; }
+
   @media (min-width: 640px) {
     .phone { border: 7px solid #0B1620; border-radius: 38px; }
   }
@@ -536,7 +690,18 @@
   #appMain::-webkit-scrollbar-thumb { background: #C6D3E3; border-radius: 9999px; }
   #appMain::-webkit-scrollbar-track { background: transparent; }
 
-  /* ======== IMMERSIVE READER — sel braille besar ======== */
+  /* Layar full-bleed (splash & login): wrapper mengisi seluruh tinggi app */
+  .screen-fill {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+  .screen-fill > * { flex: 1 1 auto; }
+
+  /* Saat splash/login: hilangkan ruang bawah untuk bottom nav */
+  body.is-fullscreen #appMain { padding-bottom: 0 !important; }
+
+  /* ==== IMMERSIVE READER — sel braille besar ==== */
 
   /* Grid 3 kolom (untuk maks 9 sel = 3×3).
      auto-fit agar jika kata pendek sel tetap proporsional. */
@@ -602,6 +767,13 @@
     animation: dotTick .38s var(--ease-spring);
   }
 
+  /* Sorot sel huruf yang sedang bergetar pada latihan */
+  .bdot-active { transform: scale(1.08); transition: transform .16s var(--ease-spring); }
+  .bdot-active .reader-bdot.on {
+    box-shadow: 0 0 0 4px rgba(255,255,255,.28), 0 2px 8px -2px rgba(0,0,0,.3);
+  }
+  .bdot-active .reader-bdot { background: rgba(255,255,255,.28); }
+
   /* Label huruf Latin di bawah titik-titik */
   .braille-cell-label {
     font-size: 12px; font-weight: 800;
@@ -631,6 +803,9 @@
          class="rounded-2xl bg-ink-900 text-white px-4 py-3 text-sm font-semibold shadow-card max-w-[92%] text-center">
       <span id="a11yToastText"></span>
     </div>
+
+    <!-- ---- FLASH TRANSISI (dipakai saat login sukses) ---- -->
+    <div id="screenFlash" class="screen-flash" aria-hidden="true"></div>
 
     <!-- ---- HEADER ATAS (dinamis per layar) ---- -->
     <header id="appHeader" class="hidden"></header>
@@ -739,6 +914,12 @@ const HAPTIC = {
     'z': [1,3,5,6],
     ' ': [0], // spasi
     '.': [2,5,6], ',': [2], '?': [2,3,6], '!': [2,3,5],
+    // Angka memakai pola huruf A-J (didahului "number sign" 3,4,5,6 pada braille asli)
+    '1': [1], '2': [1,2], '3': [1,4], '4': [1,4,5], '5': [1,5],
+    '6': [1,2,4], '7': [1,2,4,5], '8': [1,2,5], '9': [2,4], '0': [2,4,5],
+    // Tanda baca tambahan
+    '-': [3,6], '(': [2,3,5,6], ')': [2,3,5,6], ':': [2,5], ';': [2,3],
+    "'": [3], '"': [2,3,5,6], '/': [3,4],
   },
 
   /* Ubah karakter jadi daftar titik aktif (1-6) */
