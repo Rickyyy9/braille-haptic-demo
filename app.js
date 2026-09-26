@@ -125,6 +125,73 @@ function brandMark(size = 'w-6 h-6') {
 }
 
 /* ============ LAYAR 1 : ONBOARDING / HOME ============ */
+function brandAppIcon(sizeClass = 'w-[96px] h-[96px]') {
+  return `
+    <div class="brand-app-icon ${sizeClass}">
+      <div class="braille-grid" aria-hidden="true">
+        <span class="braille-dot"></span>
+        <span class="braille-dot empty"></span>
+        <span class="braille-dot"></span>
+        <span class="braille-dot"></span>
+        <span class="braille-dot empty"></span>
+        <span class="braille-dot"></span>
+        <span class="braille-dot empty"></span>
+        <span class="braille-dot"></span>
+        <span class="braille-dot"></span>
+      </div>
+    </div>
+  `;
+}
+
+function renderSplash() {
+  return `
+    <div class="splash-screen">
+      ${brandAppIcon('w-[116px] h-[116px]')}
+      <div class="brand-subtitle">Accessible Haptic Reader</div>
+      <div class="brand-title">Braille Haptic</div>
+      <div class="loading-bar" aria-label="Memuat aplikasi"></div>
+    </div>
+  `;
+}
+
+function renderLogin() {
+  return `
+    <div class="login-screen">
+      <div class="login-card">
+        <div class="login-header">
+          ${brandAppIcon('w-[90px] h-[90px]')}
+          <div>
+            <div class="login-title">Braille Haptic</div>
+            <div class="login-subtitle">Masuk sebagai pendamping &amp; fasilitator</div>
+          </div>
+        </div>
+
+        <div class="input-wrap">
+          <label for="loginEmail">Email</label>
+          <input id="loginEmail" type="email" value="bunda@braillehaptic.id" aria-label="Email" />
+        </div>
+
+        <div class="input-wrap">
+          <label for="loginPassword">Password</label>
+          <input id="loginPassword" type="password" value="••••••••" aria-label="Password" />
+        </div>
+
+        <div class="helper-row">
+          <span>Ingat saya</span>
+          <a href="#" data-act="forgot">Lupa kata sandi?</a>
+        </div>
+
+        <div class="divider">atau</div>
+
+        <div class="login-actions">
+          <button type="button" class="login-btn primary" data-nav="home">Masuk</button>
+          <button type="button" class="login-btn secondary" data-act="signup">Buat akun baru</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function renderHome() {
   // Figma: "Braille Haptic" / "Bunda Haptic / Tenaga Didik Terlatih"
   return `
@@ -375,154 +442,191 @@ function recentRow(title, sub, pct, tone) {
   </li>`;
 }
 
-/* ============ LAYAR 3 : READER ============ */
-function renderReader() {
-  // Kalimat Figma: "Suara lincong tua berdenting nyaring di halaman sekolah kami yang sunyi."
+/* ============ LAYAR 3 : READER (Immersive Braille View) ============ */
+
+/* Kata-kata dalam paragraf yang akan dibaca */
+const READER_SENTENCES = [
+  'Perjalanan', 'Kancil', 'Menyeberangi', 'Sungai',
+  'dengan', 'penuh', 'keberanian', 'dan', 'kecerdikan',
+];
+let readerWordIdx = 0; // indeks kata saat ini
+
+function getReaderWord() {
+  return READER_SENTENCES[readerWordIdx] || READER_SENTENCES[0];
+}
+
+/* Bangun sel braille besar untuk sebuah huruf.
+   Layout titik: [1,4] [2,5] [3,6] — 2 kolom × 3 baris sesuai standar braille. */
+function buildBigBrailleCell(ch, isActive = false, idx = 0) {
+  const letter = ch.toLowerCase();
+  const dots = HAPTIC.dotsFor(letter) || [];
+  // Layout 6 titik: kiri=1,2,3 | kanan=4,5,6 → urutan render: 1,4,2,5,3,6
+  const layout = [1, 4, 2, 5, 3, 6];
+  const dotsHTML = layout.map((n, li) => {
+    const on = dots.includes(n);
+    // Nomor titik ditampilkan di atas dot saat tidak aktif (seperti gambar referensi)
+    return `<span class="reader-bdot${on ? ' on' : ''}" aria-hidden="true"
+      data-dot-num="${n}">${on ? '' : n}</span>`;
+  }).join('');
+
   return `
-  <div class="pb-6">
-    <div class="px-5 pt-4 rise">
-      <div class="flex items-start justify-between gap-3">
-        <div class="min-w-0">
-          <h1 class="text-[19px] font-extrabold text-ink-900 leading-tight tracking-[-0.02em]">${STATE.book.title}</h1>
-          <p class="text-[12.5px] text-ink-500 mt-1">Buku • ${STATE.book.author} • Derning Lancong Sekalar</p>
+  <div class="braille-word-cell${isActive ? ' active' : ''}" data-char-idx="${idx}"
+       role="img" aria-label="Huruf ${ch.toUpperCase()}, titik braille ${dots.join(', ') || 'tidak ada'}">
+    <div class="braille-cell-dots">${dotsHTML}</div>
+    <span class="braille-cell-label">${ch.toUpperCase()}</span>
+  </div>`;
+}
+
+function renderReader() {
+  const word = getReaderWord();
+  // Maksimal 9 huruf ditampilkan sekaligus
+  const MAX_CELLS = 9;
+  const chars = [...word].slice(0, MAX_CELLS);
+
+  const cellsHTML = chars.map((ch, i) => buildBigBrailleCell(ch, i === 0, i)).join('');
+
+  // Preview kalimat
+  const sentenceWords = READER_SENTENCES.map((w, i) => {
+    const isCur = i === readerWordIdx;
+    return `<span class="inline ${isCur ? 'text-white font-bold underline underline-offset-4 decoration-white/60' : 'text-white/50'}" data-word-idx="${i}">${w}</span>`;
+  }).join('<span class="text-white/30"> </span>');
+
+  return `
+  <!-- Layar immersive — full blue, dirancang khusus untuk pengguna deafblind -->
+  <div id="readerImmersive" class="flex flex-col min-h-full select-none"
+       style="background: linear-gradient(175deg, #2B7BF3 0%, #0B5FCC 40%, #094BA3 75%, #0A3D80 100%);"
+       aria-label="Layar baca haptic braille. Ketuk sekali untuk mulai/jeda. Geser kanan 2 jari = kata berikutnya. Geser kiri 2 jari = keluar.">
+
+    <!-- Dekorasi cahaya -->
+    <div class="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
+      <div style="position:absolute;top:-60px;left:-60px;width:260px;height:260px;border-radius:9999px;background:radial-gradient(circle,rgba(255,255,255,.18),transparent 68%)"></div>
+      <div style="position:absolute;bottom:100px;right:-40px;width:200px;height:200px;border-radius:9999px;background:radial-gradient(circle,rgba(255,255,255,.12),transparent 70%)"></div>
+    </div>
+
+    <!-- Header buku -->
+    <div class="relative px-5 pt-2 pb-2">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-white/70 text-[10px] font-semibold uppercase tracking-[0.14em]">Sedang Dibaca</p>
+          <h1 class="text-white text-[16px] font-extrabold leading-tight tracking-[-0.018em] mt-0.5">${STATE.book.title}</h1>
+          <p class="text-white/60 text-[11px] mt-0.5">${STATE.book.author}</p>
         </div>
-        <div class="shrink-0 text-right rounded-xl bg-surface border border-line px-3 py-1.5">
-          <p class="text-[10px] uppercase tracking-wider text-ink-500">Karakter</p>
-          <p class="text-[15px] font-extrabold text-ink-900 tabular">14 / 68</p>
+        <div class="text-right shrink-0 ml-3">
+          <div class="rounded-xl bg-white/15 border border-white/20 px-3 py-2">
+            <p class="text-white/60 text-[9px] uppercase tracking-wider">Progres</p>
+            <p class="text-white text-[14px] font-extrabold tabular">${STATE.book.progress}%</p>
+          </div>
         </div>
       </div>
-      <div class="mt-3 flex items-center justify-between">
-        <span class="text-[12px] text-ink-500">Halaman 42 dari 68</span>
-        <span class="text-[12px] font-bold text-ok-700 tabular">23% Selesai</span>
-      </div>
-      <div class="mt-2 h-2 rounded-full bg-surface overflow-hidden" style="box-shadow: inset 0 1px 2px rgba(11,22,32,.08)"
-           role="progressbar" aria-valuenow="23" aria-valuemin="0" aria-valuemax="100"
-           aria-label="Progres membaca 23 persen">
-        <div class="h-full rounded-full transition-[width] duration-500"
-             style="width:23%; background: linear-gradient(90deg,#16A34A,#15803D)"></div>
+      <!-- Progress bar -->
+      <div class="mt-2 h-1 rounded-full bg-white/20 overflow-hidden"
+           role="progressbar" aria-valuenow="${STATE.book.progress}" aria-valuemin="0" aria-valuemax="100">
+        <div class="h-full rounded-full bg-white/80 transition-[width] duration-700"
+             style="width:${STATE.book.progress}%"></div>
       </div>
     </div>
 
-    <!-- Kalimat sumber -->
-    <section class="px-5 mt-5 rise" aria-labelledby="lbl-sentence">
-      <div class="rounded-2xl p-4 border border-line"
-           style="background: linear-gradient(180deg,#F8FBFF,#F1F6FC); box-shadow: inset 0 1px 0 rgba(255,255,255,.8)">
-        <h2 id="lbl-sentence" class="sr-only">Kalimat yang sedang dibaca</h2>
-        <p class="text-[16px] leading-[1.75] text-ink-900 font-access">${SENTENCE_HTML}</p>
+    <!-- Preview kalimat -->
+    <div class="relative px-4 py-1.5">
+      <div class="rounded-xl bg-white/10 border border-white/15 px-3 py-2"
+           style="backdrop-filter:blur(8px)">
+        <p class="text-[12px] leading-relaxed font-access" aria-live="polite" id="sentencePreview">
+          ${sentenceWords}
+        </p>
       </div>
-    </section>
+    </div>
 
-    <!-- Kartu BRAILLE -->
-    <section class="px-5 mt-4 rise" aria-labelledby="lbl-braille">
-      <div class="sheen rounded-3xl text-white p-5 on-dark relative overflow-hidden"
-           style="background: linear-gradient(155deg, #1E74E8 0%, #0B5FCC 45%, #094BA3 80%, #0A3D80 100%);
-                  box-shadow: 0 1px 2px rgba(11,22,32,.1), 0 16px 34px -16px rgba(11,95,204,.6);">
-        <div class="absolute -right-14 -top-14 w-48 h-48 rounded-full decorative"
-             style="background: radial-gradient(circle,rgba(255,255,255,.18),transparent 68%)" aria-hidden="true"></div>
-        <div class="relative">
-          <!-- Chip "Pola Getaran" -->
-          <div class="inline-flex items-center gap-2 rounded-full bg-white/20 border border-white/25 px-3 py-1.5 backdrop-blur-sm">
-            <span class="w-2 h-2 rounded-full bg-white pulse" aria-hidden="true"></span>
-            <p id="patternChip" class="text-[11.5px] font-semibold tracking-[-0.005em]">
-              Pola Getaran: Titik <span id="patternDots">1, 3, 5</span> (Aktif + Bergetar)
-            </p>
+    <!-- AREA UTAMA: Grid sel braille (maks 9 sel, 3×3) -->
+    <div class="relative flex-1 px-3 pt-1 pb-0 flex flex-col">
+
+      <!-- Status bar atas grid -->
+      <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center gap-1.5">
+          <span class="w-1.5 h-1.5 rounded-full bg-white pulse" aria-hidden="true"></span>
+          <p id="readerAutoStatus" class="text-white/80 text-[10px] font-semibold tracking-wide">Ketuk = Mulai/Jeda</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span id="autoReadBadge" class="hidden text-[9px] font-bold px-2 py-0.5 rounded-full
+                bg-amber-400 text-amber-900 border border-amber-300">● AUTO AKTIF</span>
+          <span class="text-white/50 text-[9.5px] font-semibold tabular">
+            Kata <span id="wordIdxLabel">${readerWordIdx + 1}</span>/<span>${READER_SENTENCES.length}</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- ===== GRID SEL BRAILLE ===== -->
+      <div id="brailleWordGrid" class="braille-word-grid">
+        ${cellsHTML}
+      </div>
+
+      <!-- Pola titik aktif -->
+      <div class="mt-3 flex items-center justify-center">
+        <div class="inline-flex items-center gap-2 rounded-full bg-white/15 border border-white/20 px-3 py-1.5">
+          <span class="w-2 h-2 rounded-full bg-white pulse" aria-hidden="true"></span>
+          <p id="patternDots" class="text-[11px] font-semibold text-white/90">Titik —</p>
+        </div>
+      </div>
+
+      <!-- ===== TABEL GESTUR ===== -->
+      <div class="mt-2 rounded-2xl bg-white/10 border border-white/15 overflow-hidden">
+        <div class="grid grid-cols-2 divide-x divide-white/10">
+          <div class="px-3 py-2 text-center">
+            <p class="text-[15px]">👆</p>
+            <p class="text-[8.5px] text-white/70 font-semibold mt-0.5">Ketuk = Mulai/Jeda</p>
           </div>
-
-          <div class="mt-5 flex items-center justify-center gap-9">
-            <div class="text-center">
-              <div id="bigChar" class="text-[68px] leading-none font-extrabold tracking-[-0.03em]"
-                   style="text-shadow: 0 4px 14px rgba(0,0,0,.25)">K</div>
-              <p class="mt-2 text-[10px] tracking-[0.2em] text-white/75">ALFABET LATIN</p>
-            </div>
-            <div class="w-px h-20 bg-white/20" aria-hidden="true"></div>
-            <div class="text-center">
-              <div id="brailleCell" class="grid grid-cols-2 gap-x-5 gap-y-2.5" aria-hidden="true"></div>
-              <p class="mt-2.5 text-[10px] tracking-[0.2em] text-white/75">SEL BRAILLE</p>
-            </div>
+          <div class="px-3 py-2 text-center">
+            <p class="text-[15px]">✌️→</p>
+            <p class="text-[8.5px] text-white/70 font-semibold mt-0.5">2 jari kanan = Kata selanjutnya</p>
           </div>
-
-          <button type="button" id="btnFeel"
-                  class="btn-ghost mt-5 w-full min-h-[50px] rounded-xl bg-white text-brand-700 font-bold text-[14.5px]
-                         hover:bg-brand-50 active:bg-brand-100
-                         flex items-center justify-center gap-2"
-                  style="box-shadow: 0 6px 18px -8px rgba(0,0,0,.4)">
-            ${svg('hand', 'w-5 h-5')} Rasakan pola braille ini
-          </button>
-          <p id="hapticStatus" class="mt-2.5 text-center text-[11.5px] text-white/90" role="status" aria-live="polite"></p>
+          <div class="px-3 py-2 text-center border-t border-white/10">
+            <p class="text-[15px]">✌️←</p>
+            <p class="text-[8.5px] text-white/70 font-semibold mt-0.5">2 jari kiri = Keluar</p>
+          </div>
+          <div class="px-3 py-2 text-center border-t border-white/10">
+            <p class="text-[15px]">👇</p>
+            <p class="text-[8.5px] text-white/70 font-semibold mt-0.5">Geser bawah = Kembali ke Library</p>
+          </div>
         </div>
       </div>
-    </section>
+    </div>
 
-    <!-- Kontrol pemutaran -->
-    <section class="px-5 mt-6" aria-labelledby="lbl-play">
-      <div class="flex items-center justify-between">
-        <h2 id="lbl-play" class="text-[13px] font-bold text-ink-900 tracking-[-0.01em]">Pengendali Sudut Haptic</h2>
-        <span class="inline-flex items-center gap-1.5 text-[11px] font-semibold text-ok-700">
-          <span class="w-1.5 h-1.5 rounded-full bg-ok-600 pulse" aria-hidden="true"></span> Sinkron getaran aktif
-        </span>
-      </div>
+    <!-- Status haptic -->
+    <p id="hapticStatus" class="text-center text-[10px] text-white/60 px-4 pb-1 mt-1" role="status" aria-live="polite"></p>
 
-      <div class="mt-4 flex items-center justify-center gap-5">
-        <button type="button" id="btnPrev" aria-label="Karakter sebelumnya"
-                class="btn-ghost surface w-12 h-12 rounded-full text-ink-700
-                       hover:bg-surface active:bg-brand-50 flex items-center justify-center">
-          ${svg('prev', 'w-5 h-5')}
-        </button>
-        <button type="button" id="btnPlay" aria-pressed="false"
-                class="btn-primary w-[68px] h-[68px] rounded-full text-white
-                       flex items-center justify-center">
-          <span id="playIcon">${svg('play', 'w-7 h-7')}</span>
-          <span class="sr-only" id="playLabel">Putar pembacaan haptic</span>
-        </button>
-        <button type="button" id="btnNext" aria-label="Karakter berikutnya"
-                class="btn-ghost surface w-12 h-12 rounded-full text-ink-700
-                       hover:bg-surface active:bg-brand-50 flex items-center justify-center">
-          ${svg('next', 'w-5 h-5')}
-        </button>
-      </div>
-    </section>
-
-    <!-- Panel Penyelarasan Haptic -->
-    <section class="px-5 mt-6" aria-labelledby="lbl-align">
-      <div class="flex items-center justify-between">
-        <h2 id="lbl-align" class="text-[15px] font-bold text-ink-900 tracking-[-0.012em]">Penyelarasan Haptic</h2>
-        <span class="text-[10.5px] font-bold rounded-full bg-brand-50 text-brand-600 border border-brand-100 px-2.5 py-1">Profil: Presisi Ideal</span>
-      </div>
-
-      <!-- Kecepatan Membaca -->
-      <div class="surface mt-3 rounded-2xl p-4">
-        <div class="flex items-center justify-between">
-          <label for="wpm" class="text-[13px] font-semibold text-ink-900">Kecepatan Membaca (WPM)</label>
-          <span class="text-[12px] font-bold text-brand-600 tabular"><span id="wpmVal">${STATE.settings.wpm}</span> WPM <span class="text-ink-500 font-medium">(Normal)</span></span>
-        </div>
-        <input id="wpm" type="range" min="60" max="240" step="5" value="${STATE.settings.wpm}"
-               class="mt-3 w-full accent-brand-600 cursor-pointer" aria-describedby="wpmHelp" />
-        <div class="flex justify-between text-[10.5px] text-ink-500 mt-1.5" id="wpmHelp">
-          <span>Lambat (60)</span><span>Ideal (120)</span><span>Cepat (240)</span>
-        </div>
-      </div>
-
-      <!-- Interaksi Getaran + Durasi Tick -->
-      <div class="mt-3 grid grid-cols-2 gap-3 stagger">
-        ${metricCard('Interaksi Getaran', STATE.settings.interaction, '%', 'Kuota Aktif', 'ok')}
-        ${metricCard('Durasi Tick', STATE.settings.tickMs, 'ms', 'Tinta Braille Tunggal', 'brand')}
-        ${metricCard('Jeda Karakter', STATE.settings.charGap, 'ms', 'Pemutun Hmr', 'brand')}
-        ${metricCard('Jeda Rata', STATE.settings.wordGap, 'ms', 'Perlukan Kata/Spasi', 'brand')}
-      </div>
-
-      <div class="surface mt-3 rounded-2xl divide-y divide-line overflow-hidden">
-        ${switchRow('fullVibrate', 'Mode Layar Penuh Getar', 'Seluruh permukaan layar bergetar bersamaan', STATE.settings.fullVibrate)}
-        ${switchRow('serveAudio', 'Unggah Bank Suara (Audio Cues)', 'Suara beri tahu untuk para pendamping', STATE.settings.serveAudio)}
-      </div>
-    </section>
-
-    <!-- Tombol Read Text -->
-    <div class="px-5 mt-5">
-      <button type="button" id="btnReadText"
-              class="btn-primary w-full min-h-[54px] rounded-2xl text-white font-bold text-[15px]
-                     flex items-center justify-center gap-2">
-        ${svg('braille', 'w-5 h-5', 2)} Read Text
+    <!-- Tombol CTA bawah -->
+    <div class="relative px-4 pb-3 pt-1 space-y-2">
+      <!-- Tombol utama: Mulai/Jeda Auto Baca -->
+      <button type="button" id="btnPlay" aria-pressed="false"
+              class="w-full min-h-[54px] rounded-2xl font-extrabold text-[15px] tracking-[-0.01em]
+                     flex items-center justify-center gap-3
+                     transition-all duration-200 active:scale-[.98]"
+              style="background: linear-gradient(180deg,#FFFFFF 0%,#E8F0FF 100%);
+                     box-shadow: 0 4px 20px rgba(0,0,0,.25), 0 1px 0 rgba(255,255,255,.5) inset;
+                     color: #0B5FCC;">
+        <span id="playIcon">${svg('play', 'w-5 h-5')}</span>
+        <span id="playLabel">LANJUTKAN MEMBACA</span>
       </button>
+      <!-- Kontrol sekunder -->
+      <div class="grid grid-cols-3 gap-2">
+        <button type="button" id="btnPrev" aria-label="Huruf sebelumnya"
+                class="min-h-[42px] rounded-xl bg-white/15 border border-white/20
+                       text-white font-bold text-[11px] flex items-center justify-center gap-1
+                       hover:bg-white/25 active:bg-white/30 transition-colors">
+          ${svg('prev', 'w-3.5 h-3.5')} Prev
+        </button>
+        <button type="button" id="btnFeel" aria-label="Rasakan pola braille karakter ini"
+                class="min-h-[42px] rounded-xl bg-white/15 border border-white/20
+                       text-white font-bold text-[11px] flex items-center justify-center gap-1
+                       hover:bg-white/25 active:bg-white/30 transition-colors">
+          ${svg('hand', 'w-3.5 h-3.5')} Rasa
+        </button>
+        <button type="button" id="btnNext" aria-label="Huruf berikutnya"
+                class="min-h-[42px] rounded-xl bg-white/15 border border-white/20
+                       text-white font-bold text-[11px] flex items-center justify-center gap-1
+                       hover:bg-white/25 active:bg-white/30 transition-colors">
+          Next ${svg('next', 'w-3.5 h-3.5')}
+        </button>
+      </div>
     </div>
   </div>`;
 }
@@ -847,6 +951,8 @@ function gestureExample(ch) {
    4. ROUTER
    ------------------------------------------------------------------------- */
 const SCREENS = {
+  splash:    { render: renderSplash,    title: null,            back: false },
+  login:     { render: renderLogin,     title: 'Login',         back: false },
   home:      { render: renderHome,      title: null,            back: false },
   dashboard: { render: renderDashboard, title: 'Beranda',       back: true  },
   reader:    { render: renderReader,    title: 'Baca Buku',     back: true  },
@@ -882,6 +988,7 @@ function render() {
 
 function renderHeader(s) {
   const h = document.getElementById('appHeader');
+  if (['splash', 'login'].includes(STATE.screen)) { h.className = 'hidden'; h.innerHTML = ''; return; }
   if (STATE.screen === 'home') { h.className = 'hidden'; h.innerHTML = ''; return; }
 
   h.className = 'flex items-center gap-2.5 px-4 py-2.5 sticky top-0 z-30 border-b border-line'
@@ -911,6 +1018,11 @@ function renderHeader(s) {
 }
 
 function renderNav() {
+  if (['splash', 'login'].includes(STATE.screen)) {
+    nav.innerHTML = '';
+    return;
+  }
+
   nav.innerHTML = NAV_ITEMS.map(item => {
     const active = item.id === STATE.screen;
     return `
@@ -963,6 +1075,19 @@ function bindScreenEvents() {
     });
   });
 
+  main.querySelectorAll('[data-act="forgot"]').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.preventDefault();
+      announce('Fungsi lupa kata sandi belum diimplementasikan pada prototype.', true);
+    });
+  });
+
+  main.querySelectorAll('[data-act="signup"]').forEach(el => {
+    el.addEventListener('click', () => {
+      announce('Halaman pendaftaran baru siap dikembangkan.', true);
+    });
+  });
+
   // Toggle switch
   main.querySelectorAll('[data-switch]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -994,70 +1119,321 @@ function bindScreenEvents() {
   if (STATE.screen === 'practice') bindPracticeEvents();
 }
 
-/* --- Reader --- */
-let readerIdx = 0;
+/* --- Reader (Immersive) --- */
+let readerIdx = 0;       // indeks huruf dalam kata saat ini
+let readerAutoPlaying = false;
 
 function bindReaderEvents() {
-  drawBraille(READER_WORD[0].toUpperCase());
-  markCharByIndex(0);
   const status = main.querySelector('#hapticStatus');
+  const autoStatusEl = main.querySelector('#readerAutoStatus');
+  const autoReadBadge = main.querySelector('#autoReadBadge');
+  const curWord = getReaderWord();
+  highlightCell(0);
+  updateHapticStatus(status, curWord[0]);
 
+  /* ---- Tombol Rasa ---- */
   main.querySelector('#btnFeel').addEventListener('click', async () => {
-    const ch = READER_WORD[readerIdx] || READER_WORD[0];
+    const ch = getReaderWord()[readerIdx] || getReaderWord()[0];
+    highlightCell(readerIdx);
     updateHapticStatus(status, ch);
-    drawBraille(ch.toUpperCase(), true);
-    markCharByIndex(readerIdx);
     await HAPTIC.buzzText(ch);
   });
 
-  const play = main.querySelector('#btnPlay');
-  const playIcon = main.querySelector('#playIcon');
-  const playLabel = main.querySelector('#playLabel');
-  let playing = false;
-
-  play.addEventListener('click', async () => {
-    playing = !playing;
-    play.setAttribute('aria-pressed', String(playing));
-    playIcon.innerHTML = playing ? svg('pause', 'w-7 h-7') : svg('play', 'w-7 h-7');
-    playLabel.textContent = playing ? 'Jeda pembacaan haptic' : 'Putar pembacaan haptic';
-
-    if (playing) {
-      announce(HAPTIC.supported ? 'Memutar pola braille. Rasakan getaran.' : 'Getaran tidak tersedia. Menampilkan simulasi visual.', true);
-      await HAPTIC.buzzText(READER_WORD, (i, ch) => {
-        readerIdx = i;
-        drawBraille(ch.toUpperCase(), true);
-        markCharByIndex(i);
-        updateHapticStatus(status, ch);
-      });
-      playing = false;
-      play.setAttribute('aria-pressed', 'false');
-      playIcon.innerHTML = svg('play', 'w-7 h-7');
-      playLabel.textContent = 'Putar pembacaan haptic';
-    } else {
-      HAPTIC.stop();
-    }
-  });
-
+  /* ---- Tombol Prev / Next huruf ---- */
   main.querySelector('#btnPrev').addEventListener('click', () => {
-    readerIdx = (readerIdx - 1 + READER_WORD.length) % READER_WORD.length;
+    const word = getReaderWord();
+    readerIdx = (readerIdx - 1 + word.length) % word.length;
     previewChar(readerIdx, status);
   });
   main.querySelector('#btnNext').addEventListener('click', () => {
-    readerIdx = (readerIdx + 1) % READER_WORD.length;
+    const word = getReaderWord();
+    readerIdx = (readerIdx + 1) % word.length;
     previewChar(readerIdx, status);
   });
-  main.querySelector('#btnReadText')?.addEventListener('click', () => {
-    announce('Membaca teks dengan getaran braille.', true);
+
+  /* ---- Tombol Play / Auto Baca ---- */
+  const play = main.querySelector('#btnPlay');
+  const playIcon = main.querySelector('#playIcon');
+  const playLabel = main.querySelector('#playLabel');
+
+  async function startAutoRead() {
+    readerAutoPlaying = true;
+    play.setAttribute('aria-pressed', 'true');
+    playIcon.innerHTML = svg('pause', 'w-5 h-5');
+    playLabel.textContent = 'JEDA';
+    if (autoReadBadge) autoReadBadge.classList.remove('hidden');
+    if (autoStatusEl) autoStatusEl.textContent = 'Auto-baca aktif — ketuk 2 jari untuk jeda';
+    play.style.background = 'linear-gradient(180deg,#FFD700 0%,#F59E0B 100%)';
+    play.style.color = '#0A3D80';
+
+    announce(HAPTIC.supported ? 'Auto-baca aktif. Rasakan getaran.' : 'Auto-baca aktif. Simulasi visual.', true);
+
+    // Baca semua kata secara berurutan dari posisi saat ini
+    for (let wi = readerWordIdx; wi < READER_SENTENCES.length; wi++) {
+      if (!readerAutoPlaying) break;
+      readerWordIdx = wi;
+      readerIdx = 0;
+      refreshReaderUI();
+
+      const word = READER_SENTENCES[wi];
+      await HAPTIC.buzzText(word, (i, ch) => {
+        if (!readerAutoPlaying) return;
+        highlightCell(i);
+        updateHapticStatus(status, ch);
+      });
+
+      if (!readerAutoPlaying) break;
+      // Jeda antar kata
+      await HAPTIC._sleep(STATE.settings.wordGap);
+    }
+
+    stopAutoRead();
+  }
+
+  function stopAutoRead() {
+    readerAutoPlaying = false;
+    HAPTIC.stop();
+    play.setAttribute('aria-pressed', 'false');
+    playIcon.innerHTML = svg('play', 'w-5 h-5');
+    playLabel.textContent = 'LANJUTKAN MEMBACA';
+    if (autoReadBadge) autoReadBadge.classList.add('hidden');
+    if (autoStatusEl) autoStatusEl.textContent = 'Ketuk 2 jari = Auto-Baca';
+    play.style.background = 'linear-gradient(180deg,#FFFFFF 0%,#E8F0FF 100%)';
+    play.style.color = '#0B5FCC';
+  }
+
+  play.addEventListener('click', () => {
+    if (readerAutoPlaying) stopAutoRead();
+    else startAutoRead();
+  });
+
+  /* ---- Gestur Swipe ---- */
+  bindReaderGestures(status, stopAutoRead);
+}
+
+function refreshReaderUI() {
+  const word = getReaderWord();
+  const chars = [...word];
+  const grid = main.querySelector('#brailleWordGrid');
+  if (grid) {
+    grid.innerHTML = chars.map((ch, i) => buildBigBrailleCell(ch, i === readerIdx, i)).join('');
+  }
+  const wordLabel = main.querySelector('#wordIdxLabel');
+  if (wordLabel) wordLabel.textContent = readerWordIdx + 1;
+
+  // Update kalimat preview
+  const preview = main.querySelector('#sentencePreview');
+  if (preview) {
+    preview.innerHTML = READER_SENTENCES.map((w, i) => {
+      const isCur = i === readerWordIdx;
+      return `<span class="inline ${isCur ? 'text-white font-bold underline underline-offset-4 decoration-white/60' : 'text-white/50'}">${w}</span>`;
+    }).join('<span class="text-white/30"> </span>');
+  }
+}
+
+function highlightCell(idx) {
+  const grid = main.querySelector('#brailleWordGrid');
+  if (!grid) return;
+  const word = getReaderWord();
+  const ch = word[idx] || word[0];
+  grid.querySelectorAll('.braille-word-cell').forEach((el, i) => {
+    el.classList.toggle('active', i === idx);
+  });
+  // Update label pola titik braille
+  const dots = HAPTIC.dotsFor(ch.toLowerCase()) || [];
+  const patternEl = main.querySelector('#patternDots');
+  if (patternEl) {
+    patternEl.textContent = dots.length
+      ? `${ch.toUpperCase()} — Titik ${dots.join(', ')}`
+      : `${ch.toUpperCase()} — Spasi`;
+  }
+}
+
+function bindReaderGestures(status, onStop) {
+  const el = main.querySelector('#readerImmersive');
+  if (!el) return;
+
+  // State bersama untuk touch & mouse
+  let startX = 0, startY = 0;
+  let startTime = 0;
+  let fingers = 0;
+  let tapCount = 0;
+  let tapTimer = null;
+  let longPressTimer = null;
+  let didLongPress = false;
+  let mouseDown = false;
+  let mouseMoved = false;
+
+  /* ---------- helpers navigasi ---------- */
+  function nextWord() {
+    if (onStop) onStop();
+    readerWordIdx = Math.min(readerWordIdx + 1, READER_SENTENCES.length - 1);
+    readerIdx = 0;
+    refreshReaderUI();
+    const w = getReaderWord();
+    drawBraille(w[0].toUpperCase(), true);
+    highlightCell(0);
+    updateHapticStatus(status, w[0]);
+    announce(`Kata berikutnya: ${w}`, true);
+    if (HAPTIC.supported) navigator.vibrate([30, 50, 30]);
+  }
+
+  function prevWord() {
+    if (onStop) onStop();
+    readerWordIdx = Math.max(readerWordIdx - 1, 0);
+    readerIdx = 0;
+    refreshReaderUI();
+    const w = getReaderWord();
+    drawBraille(w[0].toUpperCase(), true);
+    highlightCell(0);
+    updateHapticStatus(status, w[0]);
+    announce(`Kata sebelumnya: ${w}`, true);
+    if (HAPTIC.supported) navigator.vibrate([60]);
+  }
+
+  function exitReader() {
+    if (onStop) onStop();
+    announce('Keluar dari mode baca.', true);
+    if (HAPTIC.supported) navigator.vibrate([80, 40, 80]);
+    setTimeout(() => {
+      go('dashboard');
+      history.pushState({ screen: 'dashboard' }, '');
+    }, 150);
+  }
+
+  function repeatWord() {
+    const w = getReaderWord();
+    announce(`Mengulang kata: ${w}`, true);
+    HAPTIC.buzzText(w, (i, ch) => {
+      readerIdx = i;
+      drawBraille(ch.toUpperCase(), true);
+      highlightCell(i);
+      updateHapticStatus(status, ch);
+    });
+  }
+
+  function saveBookmark() {
+    announce(`Bookmark disimpan di kata ${readerWordIdx + 1}: ${getReaderWord()}`, true);
+    if (HAPTIC.supported) navigator.vibrate([40, 30, 40, 30, 120]);
+    showToast(`🔖 Bookmark disimpan — "${getReaderWord()}"`);
+  }
+
+  /* ---------- inti gestur: dipakai oleh touch & mouse ---------- */
+  function handleGestureEnd(dx, dy, dt, numFingers, isLong) {
+    if (isLong) { saveBookmark(); return; }
+
+    const absDx = Math.abs(dx), absDy = Math.abs(dy);
+    const isSwipe = dt < 700 && (absDx > 45 || absDy > 45);
+
+    /* --- 2 jari (touch) atau tombol kanan mouse (mouse) --- */
+    if (numFingers >= 2) {
+      if (isSwipe && absDx > absDy) {
+        dx > 0 ? nextWord() : exitReader();
+      }
+      return;
+    }
+
+    /* --- swipe 1 jari / mouse drag --- */
+    if (isSwipe) {
+      if (absDy > absDx && absDy > 45) {
+        if (dy > 0) exitReader();
+      } else if (absDx > absDy && absDx > 45) {
+        if (onStop) onStop();
+        const word = getReaderWord();
+        if (dx < 0) readerIdx = (readerIdx + 1) % word.length;
+        else        readerIdx = (readerIdx - 1 + word.length) % word.length;
+        previewChar(readerIdx, status);
+      }
+      return;
+    }
+
+    /* --- tap --- */
+    if (absDx < 15 && absDy < 15 && dt < 500) {
+      tapCount++;
+      clearTimeout(tapTimer);
+      tapTimer = setTimeout(() => {
+        if (tapCount === 1) main.querySelector('#btnPlay')?.click();
+        else if (tapCount >= 2) repeatWord();
+        tapCount = 0;
+      }, 280);
+    }
+  }
+
+  /* ==================== TOUCH EVENTS ==================== */
+  el.addEventListener('touchstart', (e) => {
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    startTime = Date.now();
+    fingers = e.touches.length;
+    didLongPress = false;
+    clearTimeout(longPressTimer);
+    longPressTimer = setTimeout(() => { didLongPress = true; saveBookmark(); }, 650);
+  }, { passive: true });
+
+  el.addEventListener('touchend', (e) => {
+    clearTimeout(longPressTimer);
+    if (didLongPress) return;
+    const dx = e.changedTouches[0].clientX - startX;
+    const dy = e.changedTouches[0].clientY - startY;
+    handleGestureEnd(dx, dy, Date.now() - startTime, fingers, false);
+  }, { passive: true });
+
+  /* ==================== MOUSE EVENTS ==================== */
+  // Klik kanan mouse = simulasi 2 jari (untuk test di desktop)
+  el.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    // Klik kanan tanpa drag = tampilkan info
+    showToast('Tip: Drag kanan = kata selanjutnya | Drag kiri = keluar');
+  });
+
+  el.addEventListener('mousedown', (e) => {
+    if (e.button === 2) return; // kanan ditangani contextmenu
+    mouseDown = true;
+    mouseMoved = false;
+    startX = e.clientX;
+    startY = e.clientY;
+    startTime = Date.now();
+    // Simulasi 2 jari dengan Alt/Shift key
+    fingers = (e.altKey || e.shiftKey) ? 2 : 1;
+    didLongPress = false;
+    clearTimeout(longPressTimer);
+    longPressTimer = setTimeout(() => {
+      if (mouseDown && !mouseMoved) { didLongPress = true; saveBookmark(); }
+    }, 650);
+    e.preventDefault(); // cegah seleksi teks
+  });
+
+  el.addEventListener('mousemove', (e) => {
+    if (!mouseDown) return;
+    const dx = Math.abs(e.clientX - startX), dy = Math.abs(e.clientY - startY);
+    if (dx > 8 || dy > 8) mouseMoved = true;
+  });
+
+  el.addEventListener('mouseup', (e) => {
+    if (!mouseDown) return;
+    mouseDown = false;
+    clearTimeout(longPressTimer);
+    if (didLongPress) return;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    handleGestureEnd(dx, dy, Date.now() - startTime, fingers, false);
+  });
+
+  // Mouse meninggalkan area = batalkan
+  el.addEventListener('mouseleave', () => {
+    mouseDown = false;
+    clearTimeout(longPressTimer);
   });
 }
 
 function previewChar(i, status) {
-  const ch = READER_WORD[i];
+  const word = getReaderWord();
+  const ch = word[i];
   readerIdx = i;
   drawBraille(ch.toUpperCase(), true);
-  markCharByIndex(i);
+  highlightCell(i);
   updateHapticStatus(status, ch);
-  announce(`Huruf ${i + 1} dari ${READER_WORD.length}: ${ch}`);
+  announce(`Huruf ${i + 1} dari ${word.length}: ${ch}`);
 }
 
 /* Tandai huruf aktif di kalimat berdasarkan POSISI (indeks), bukan isi huruf.
@@ -1171,20 +1547,27 @@ function bindPracticeEvents() {
 function boot() {
   focusMode.init();
 
+  STATE.screen = 'splash';
+  render();
+
+  setTimeout(() => {
+    STATE.screen = 'login';
+    render();
+    announce('Selamat datang. Silakan masuk untuk melanjutkan.', true);
+  }, 1600);
+
   setTimeout(() => {
     if (!HAPTIC.supported) {
       showToast('Catatan: getaran hanya berfungsi di Android (Chrome). Di perangkat ini memakai simulasi visual.');
     }
-  }, 900);
+  }, 1900);
 
-  history.replaceState({ screen: 'home' }, '');
+  history.replaceState({ screen: 'splash' }, '');
   window.addEventListener('popstate', (e) => {
-    STATE.screen = (e.state && e.state.screen) || 'home';
+    STATE.screen = (e.state && e.state.screen) || 'splash';
     render();
     main.scrollTop = 0;
   });
-
-  render();
 }
 
 boot();

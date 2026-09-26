@@ -95,6 +95,11 @@
 
   html, body { height: 100%; }
   body {
+    margin: 0;
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-family: 'Inter', system-ui, sans-serif;
     background:
       radial-gradient(1200px 700px at 15% -10%, #DCE9FF 0%, transparent 60%),
@@ -267,25 +272,348 @@
   body.focus-mode .ui-scale { font-size: 1.14em; }
   body.focus-mode .surface { border-width: 2px; }
 
-  /* Kartu "hp" di layar besar — bezel lembut */
+  /* Kartu "hp" stabil — dibuat benar-benar lebih tinggi dan hampir menutupi tinggi layar */
   .phone {
-    width: 100%; max-width: 420px; min-height: 640px;
-    background: #fff; border-radius: 34px; overflow: hidden;
+    width: min(100vw - 16px, 360px);
+    max-width: 360px;
+    height: min(100dvh - 8px, 680px);
+    max-height: calc(100dvh - 8px);
+    min-height: 640px;
+    flex-shrink: 0;
+    background: #fff; border-radius: 30px; overflow: hidden;
     box-shadow:
       0 0 0 1px rgba(11,22,32,.05),
       0 2px 6px rgba(11,22,32,.08),
       0 24px 48px -20px rgba(11,22,32,.30),
       0 48px 90px -50px rgba(11,22,32,.40);
     position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .brand-app-icon {
+    position: relative;
+    width: 96px;
+    height: 96px;
+    border-radius: 28px;
+    background: linear-gradient(160deg, #F1F8FF 0%, #DDEEFF 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.75), 0 18px 34px -20px rgba(11,95,204,.7);
+    border: 1px solid rgba(11,95,204,.18);
+    display: grid;
+    place-items: center;
+  }
+
+  .brand-app-icon .braille-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px 10px;
+    transform: rotate(-8deg);
+  }
+
+  .brand-app-icon .braille-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 9999px;
+    background: #0B5FCC;
+    box-shadow: 0 0 0 3px rgba(11,95,204,.12);
+  }
+
+  .brand-app-icon .braille-dot.empty {
+    background: rgba(11,95,204,.18);
+    box-shadow: none;
+  }
+
+  .splash-screen {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    background:
+      radial-gradient(900px 400px at 50% -10%, rgba(255,255,255,.28), transparent 60%),
+      linear-gradient(180deg, #F4F9FF 0%, #EAF3FF 30%, #DCEBFF 100%);
+    color: #0B1620;
+    padding: 32px 20px;
+  }
+
+  .splash-screen .brand-title {
+    margin-top: 20px;
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -0.05em;
+    color: #0B1620;
+  }
+
+  .splash-screen .brand-subtitle {
+    margin-top: 8px;
+    font-size: .8rem;
+    font-weight: 700;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: rgba(11,22,32,.62);
+  }
+
+  .splash-screen .loading-bar {
+    position: relative;
+    width: 160px;
+    height: 8px;
+    margin-top: 28px;
+    border-radius: 9999px;
+    background: rgba(11,95,204,.12);
+    overflow: hidden;
+  }
+
+  .splash-screen .loading-bar::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    width: 36%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #2B7BF3, #0B5FCC);
+    animation: splashPulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes splashPulse {
+    0% { transform: translateX(-80%); }
+    50% { transform: translateX(180%); }
+    100% { transform: translateX(-80%); }
+  }
+
+  .login-screen {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background:
+      radial-gradient(900px 500px at 50% -20%, rgba(86,144,255,.18), transparent 55%),
+      linear-gradient(180deg, #F8FBFF 0%, #EEF5FF 100%);
+    padding: 28px 20px 24px;
+  }
+
+  .login-card {
+    background: rgba(255,255,255,.82);
+    border: 1px solid rgba(11,95,204,.08);
+    border-radius: 28px;
+    box-shadow: 0 20px 45px -28px rgba(11,95,204,.28);
+    backdrop-filter: blur(14px);
+    padding: 22px 18px 18px;
+  }
+
+  .login-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  .login-title {
+    font-size: 1.7rem;
+    line-height: 1.08;
+    font-weight: 800;
+    letter-spacing: -0.05em;
+    color: #0B1620;
+  }
+
+  .login-subtitle {
+    font-size: .82rem;
+    color: rgba(11,22,32,.66);
+    letter-spacing: .02em;
+  }
+
+  .input-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 14px;
+  }
+
+  .input-wrap label {
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: rgba(11,22,32,.62);
+  }
+
+  .input-wrap input {
+    width: 100%;
+    border: 1px solid rgba(11,95,204,.15);
+    background: #F7FAFF;
+    color: #0B1620;
+    border-radius: 14px;
+    min-height: 48px;
+    padding: 0 14px;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color .2s ease, box-shadow .2s ease;
+  }
+
+  .input-wrap input:focus {
+    border-color: rgba(11,95,204,.72);
+    box-shadow: 0 0 0 3px rgba(11,95,204,.12);
+  }
+
+  .login-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 18px;
+  }
+
+  .login-btn {
+    border: 0;
+    min-height: 50px;
+    border-radius: 14px;
+    font-weight: 800;
+    letter-spacing: -.02em;
+    cursor: pointer;
+  }
+
+  .login-btn.primary {
+    background: linear-gradient(180deg, #1670E3 0%, #0B5FCC 55%, #0A55B8 100%);
+    color: #fff;
+    box-shadow: 0 12px 22px -18px rgba(11,95,204,.8);
+  }
+
+  .login-btn.secondary {
+    background: #EEF5FF;
+    color: #0B5FCC;
+    border: 1px solid rgba(11,95,204,.14);
+  }
+
+  .helper-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: .76rem;
+    margin-top: 14px;
+    color: rgba(11,22,32,.68);
+  }
+
+  .helper-row a {
+    color: #0B5FCC;
+    text-decoration: none;
+    font-weight: 700;
+  }
+
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 18px 0 12px;
+    color: rgba(11,22,32,.52);
+    font-size: .72rem;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+  }
+
+  .divider::before,
+  .divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(11,22,32,.12);
   }
   @media (min-width: 640px) {
-    .phone { border: 8px solid #0B1620; border-radius: 44px; }
+    .phone { border: 7px solid #0B1620; border-radius: 38px; }
+  }
+  @media (max-width: 639px) {
+    .phone {
+      width: 100vw;
+      height: 100dvh;
+      max-height: 100dvh;
+      min-height: 100dvh;
+      border-radius: 0;
+      border: 0;
+    }
   }
 
   /* Scrollbar halus di dalam app */
   #appMain::-webkit-scrollbar { width: 6px; }
   #appMain::-webkit-scrollbar-thumb { background: #C6D3E3; border-radius: 9999px; }
   #appMain::-webkit-scrollbar-track { background: transparent; }
+
+  /* ======== IMMERSIVE READER — sel braille besar ======== */
+
+  /* Grid 3 kolom (untuk maks 9 sel = 3×3).
+     auto-fit agar jika kata pendek sel tetap proporsional. */
+  .braille-word-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  /* Sel braille per huruf */
+  .braille-word-cell {
+    background: rgba(255,255,255,.14);
+    border: 2px solid rgba(255,255,255,.18);
+    border-radius: 16px;
+    padding: 10px 6px 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+    cursor: pointer;
+    transition: background var(--dur-fast) var(--ease-out),
+                border-color var(--dur-fast) var(--ease-out),
+                transform var(--dur-fast) var(--ease-spring),
+                box-shadow var(--dur-base) var(--ease-out);
+  }
+  .braille-word-cell.active {
+    background: rgba(255,255,255,.30);
+    border-color: rgba(255,255,255,.75);
+    transform: scale(1.07);
+    box-shadow: 0 0 0 3px rgba(255,255,255,.18), 0 8px 20px -8px rgba(0,0,0,.30);
+  }
+  .braille-word-cell:active { transform: scale(.96); }
+
+  /* Grid 2-kolom × 3-baris di dalam setiap sel */
+  .braille-cell-dots {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 6px;
+  }
+
+  /* Satu titik braille — ukuran proporsional dengan sel */
+  .reader-bdot {
+    width: 18px; height: 18px; border-radius: 9999px;
+    background: rgba(255,255,255,.15);
+    border: 1.5px solid rgba(255,255,255,.22);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 8px; font-weight: 800;
+    color: rgba(255,255,255,.55);
+    line-height: 1;
+    transition: background .13s, transform .13s var(--ease-spring),
+                box-shadow .13s, color .13s;
+  }
+  /* Titik aktif (ada dalam pola braille huruf ini) */
+  .reader-bdot.on {
+    background: #FFFFFF;
+    border-color: #FFFFFF;
+    color: transparent; /* sembunyikan nomor di titik aktif */
+    transform: scale(1.12);
+    box-shadow: 0 0 0 3px rgba(255,255,255,.20), 0 2px 8px -2px rgba(0,0,0,.30);
+  }
+  /* Animasi denyut pada sel aktif */
+  .braille-word-cell.active .reader-bdot.on {
+    animation: dotTick .38s var(--ease-spring);
+  }
+
+  /* Label huruf Latin di bawah titik-titik */
+  .braille-cell-label {
+    font-size: 12px; font-weight: 800;
+    color: rgba(255,255,255,.85);
+    letter-spacing: -0.01em; line-height: 1;
+  }
+  .braille-word-cell.active .braille-cell-label { color: #FFFFFF; }
+
+  /* Hapus padding bawah main saat reader immersive aktif */
+  #appMain:has(#readerImmersive) {
+    padding-bottom: 0 !important;
+  }
 </style>
 </head>
 
@@ -295,8 +623,8 @@
 <div id="liveRegion" role="status" aria-live="polite" class="sr-only"></div>
 
 <!-- ============ KONTAINER APLIKASI ============ -->
-<div class="min-h-screen flex items-center justify-center p-0 sm:p-6">
-  <div class="phone ui-scale flex flex-col">
+<div class="min-h-screen w-full flex items-center justify-center p-0 sm:p-6">
+  <div class="phone ui-scale">
 
     <!-- ---- TOAST (di dalam kartu agar posisinya akurat) ---- -->
     <div id="a11yToast" role="alert"
