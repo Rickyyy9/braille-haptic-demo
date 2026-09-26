@@ -64,13 +64,13 @@ const STATE = {
     note: localStorage.getItem('bh_companion_note') || '',
   },
 
-  // Buku hasil unggahan
-  uploaded: JSON.parse(localStorage.getItem('bh_uploaded') || 'null') || [],
-
   // Modul latihan yang sedang dibuka
   lessonId: 'dasar',
   lessonIdx: 0,       // indeks karakter/kata dalam modul
   lessonCharIdx: 0,   // indeks huruf dalam kata (untuk modul kata)
+
+  // Hasil mode pengujian (tugas yang sudah ditandai selesai)
+  testDone: JSON.parse(localStorage.getItem('bh_test_done') || 'null') || [],
 };
 
 /* -------------------------------------------------------------------------
@@ -179,19 +179,24 @@ function renderLogin() {
         <div class="login-header">
           ${brandAppIcon('w-[90px] h-[90px]')}
           <div>
-            <div class="login-title">Braille Haptic</div>
+            <div class="login-title">Mode Caregiver</div>
             <div class="login-subtitle">Masuk sebagai pendamping &amp; fasilitator</div>
           </div>
         </div>
 
+        <p class="login-note" style="margin-top:0;margin-bottom:14px;text-align:left">
+          Mode ini membantu pendamping memilih bacaan dan mengatur awal.
+          Pengguna deafblind tetap membaca sendiri di mode utama.
+        </p>
+
         <div class="input-wrap">
-          <label for="loginEmail">Email</label>
+          <label for="loginEmail">Email pendamping</label>
           <input id="loginEmail" type="email" placeholder="nama@contoh.id" autocomplete="username" aria-label="Email" />
         </div>
 
         <div class="input-wrap">
-          <label for="loginPassword">Password</label>
-          <input id="loginPassword" type="password" placeholder="Masukkan kata sandi" autocomplete="current-password" aria-label="Password" />
+          <label for="loginPassword">Kata sandi</label>
+          <input id="loginPassword" type="password" placeholder="Masukkan kata sandi" autocomplete="current-password" aria-label="Kata sandi" />
         </div>
 
         <div class="helper-row">
@@ -203,11 +208,14 @@ function renderLogin() {
 
         <div class="login-actions">
           <button type="button" id="btnLogin" class="login-btn primary" data-act="login">
-            <span class="btn-label">Masuk</span>
+            <span class="btn-label">Masuk sebagai Pendamping</span>
             <span class="btn-spinner" aria-hidden="true"></span>
             <span class="btn-check" aria-hidden="true">${svg('check','w-6 h-6',2.6)}</span>
           </button>
-          <button type="button" class="login-btn secondary" data-act="signup">Buat akun baru</button>
+          <button type="button" class="login-btn secondary" data-nav="home" id="btnSkip">
+            Lanjut sebagai Pengguna
+          </button>
+          <button type="button" class="login-btn secondary" data-act="signup">Daftar pendamping baru</button>
         </div>
 
         <p class="login-note">
@@ -311,7 +319,7 @@ function renderHome() {
         ${homeItem('braille', 'Peta Gerakan Haptic', 'Pola getaran tiap huruf', { nav: 'gesture' })}
         ${homeItem('phone',  'Kontak Darurat', 'Hubungi pendamping', { nav: 'contacts' })}
         ${homeItem('users',  'Kondisi Pendamping', 'Siapa yang mendampingi', { nav: 'companion' })}
-        ${homeItem('upload', 'Unggah Buku Haptic', 'Impor file buku', { nav: 'upload' })}
+        ${homeItem('book2', 'Koleksi Buku', 'Pilih buku siap baca', { nav: 'upload' })}
       </ul>
     </div>
 
@@ -426,7 +434,7 @@ function renderDashboard() {
       </div>
       <div class="mt-3 grid grid-cols-2 gap-3 stagger">
         ${quickCard('book', 'Baca Toka', 'Live Braille Tactile', 'reader', 'ok', { chip: 'Toka' })}
-        ${quickCard('upload', 'Impor Buku', 'Unggah buku haptic', 'upload', 'brand', { chip: 'Haptic' })}
+        ${quickCard('book2', 'Koleksi Buku', 'Buku siap dibaca', 'upload', 'brand', { chip: 'Koleksi' })}
         ${quickCard('braillelearn', 'Latihan Braille', 'Panduan & Kuis Haptic', 'practice', 'warn', { chip: 'Audiens' })}
         ${quickCard('user', STATE.user.name, STATE.user.role, 'act:profil', 'teal', { chip: 'Profil' })}
       </div>
@@ -437,7 +445,7 @@ function renderDashboard() {
       <div class="flex items-center justify-between">
         <h2 id="lbl-recent" class="text-[15px] font-bold text-ink-900 tracking-[-0.012em]">Buku Terakhir</h2>
         <button type="button" data-nav="upload"
-                class="text-[12.5px] font-semibold text-brand-600 hover:underline">Unggah buku</button>
+                class="text-[12.5px] font-semibold text-brand-600 hover:underline">Lihat koleksi</button>
       </div>
       <ul class="mt-3 space-y-3 stagger">
         ${recentRow('Bumi Manusia', 'Pramoedya Ananta Toer', 84, 'brand', 'reader')}
@@ -1303,78 +1311,72 @@ function renderCompanion() {
   </div>`;
 }
 
-/* ============ LAYAR 8 : UNGGAH BUKU HAPTIC ============ */
+/* ============ LAYAR 8 : KOLEKSI BUKU BAWAAN ============ */
+
+/* Koleksi teks bawaan aplikasi (sesuai batasan proposal: tanpa impor).
+   Teks sudah disiapkan dalam Braille dasar/Grade 1 Bahasa Indonesia. */
+const LIBRARY = [
+  { title: 'Laskar Pelangi',             author: 'Andrea Hirata',          pages: 68,  level: 'Cerita' },
+  { title: 'Bumi Manusia',               author: 'Pramoedya Ananta Toer',  pages: 120, level: 'Novel' },
+  { title: 'Panduan Braille Dasar',      author: 'Modul Latihan Haptic',   pages: 40,  level: 'Panduan' },
+  { title: 'Catatan Harian Sahabat',     author: 'Kumpulan Cerpen',        pages: 52,  level: 'Cerpen' },
+  { title: 'Kancil Menyeberangi Sungai', author: 'Cerita Rakyat',          pages: 24,  level: 'Dongeng' },
+  { title: 'Kata Sehari-hari',           author: 'Kosakata Latihan',       pages: 18,  level: 'Latihan' },
+];
+
 function renderUpload() {
-  const list = STATE.uploaded.length ? STATE.uploaded.map((b, i) => `
+  const list = LIBRARY.map((b, i) => `
     <li>
-      <div class="surface rounded-2xl p-3.5 flex items-center gap-3">
-        <span class="w-11 h-11 shrink-0 rounded-xl text-brand-600 flex items-center justify-center border border-brand-100"
+      <button type="button" data-open-book="${b.title}" data-nav="reader"
+              aria-label="Baca buku ${b.title} oleh ${b.author}, ${b.pages} halaman"
+              class="surface surface-interactive w-full flex items-center gap-3.5 rounded-2xl p-3.5 text-left group">
+        <span class="w-12 h-14 shrink-0 rounded-lg text-brand-600 flex items-center justify-center border border-brand-100 transition-transform duration-200 group-hover:scale-[1.04]"
               style="background: linear-gradient(160deg,#EEF5FF,#D9E8FF)" aria-hidden="true">
           ${svg('book2','w-5 h-5',1.7)}
         </span>
-        <div class="min-w-0 flex-1">
-          <p class="text-[13.5px] font-bold text-ink-900 truncate">${b.title}</p>
-          <p class="text-[11.5px] text-ink-500 truncate">${b.author} • ${b.pages} halaman</p>
-        </div>
-        <span class="shrink-0 text-[10.5px] font-bold rounded-md border px-1.5 py-0.5 bg-ok-50 text-ok-700 border-ok-600/20">Siap</span>
-      </div>
-    </li>`).join('')
-    : `<li class="surface rounded-2xl p-6 text-center"><p class="text-[13px] text-ink-500">Belum ada buku diunggah.</p></li>`;
+        <span class="min-w-0 flex-1">
+          <span class="block text-[14px] font-bold text-ink-900 truncate tracking-[-0.008em]">${b.title}</span>
+          <span class="block text-[12px] text-ink-500 truncate mt-0.5">${b.author}</span>
+          <span class="mt-1.5 inline-flex items-center gap-1 text-[10.5px] font-semibold text-brand-600 bg-brand-50 border border-brand-100 rounded-full px-2 py-0.5">
+            ${b.level} • ${b.pages} hal
+          </span>
+        </span>
+        <span class="shrink-0 w-9 h-9 rounded-full bg-brand-50 text-brand-600 border border-brand-100 flex items-center justify-center">
+          ${svg('play','w-4 h-4',2)}
+        </span>
+      </button>
+    </li>`).join('');
 
   return `
   <div class="pb-6">
     <div class="px-5 pt-4 rise">
-      <h1 class="text-[21px] font-extrabold text-ink-900 leading-tight tracking-[-0.022em]">Unggah Buku Haptic</h1>
+      <h1 class="text-[21px] font-extrabold text-ink-900 leading-tight tracking-[-0.022em]">Koleksi Buku</h1>
       <p class="mt-2 text-[13px] leading-relaxed text-ink-500 font-access">
-        Impor file buku untuk dibaca. Prototipe ini menyimpan data buku secara lokal.
+        Pilih buku dari koleksi teks bawaan aplikasi, lalu baca dengan pola haptic braille.
       </p>
     </div>
 
-    <!-- Area unggah -->
-    <section class="px-5 mt-5 rise" aria-labelledby="lbl-up">
-      <h2 id="lbl-up" class="text-[14px] font-bold text-ink-900 tracking-[-0.01em]">Form Buku</h2>
-      <div class="surface mt-3 rounded-2xl p-4 space-y-3">
-        <div class="input-wrap">
-          <label for="upTitle">Judul buku</label>
-          <input id="upTitle" type="text" placeholder="Judul buku" />
-        </div>
-        <div class="input-wrap">
-          <label for="upAuthor">Penulis</label>
-          <input id="upAuthor" type="text" placeholder="Nama penulis" />
-        </div>
-        <div class="input-wrap">
-          <label for="upPages">Jumlah halaman</label>
-          <input id="upPages" type="number" min="1" inputmode="numeric" placeholder="Contoh: 120" />
-        </div>
-
-        <!-- Pilih file (demo) -->
-        <div>
-          <label class="text-[.72rem] font-bold tracking-[.08em] uppercase text-ink-500">File buku (opsional)</label>
-          <label for="upFile"
-                 class="mt-2 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed
-                        border-brand-200 bg-brand-50/50 p-5 cursor-pointer hover:bg-brand-50 transition-colors text-center">
-            <span class="text-brand-600">${svg('upload','w-7 h-7',1.8)}</span>
-            <span id="upFileName" class="text-[12.5px] text-ink-700 font-semibold">Ketuk untuk memilih file</span>
-            <span class="text-[11px] text-ink-500">PDF, TXT, atau EPUB (demo)</span>
-          </label>
-          <input id="upFile" type="file" accept=".pdf,.txt,.epub" class="sr-only" />
-        </div>
-
-        <button type="button" id="btnUpload"
-                class="btn-primary w-full min-h-[50px] rounded-xl text-white font-bold text-[14.5px]
-                       flex items-center justify-center gap-2">
-          ${svg('upload','w-5 h-5',2)} Unggah Buku
-        </button>
+    <!-- Info: teks disiapkan khusus (bukan impor) -->
+    <section class="px-5 mt-4 rise">
+      <div class="rounded-2xl border border-brand-100 p-4"
+           style="background: linear-gradient(180deg,#EEF5FF,#E4EFFF); box-shadow: inset 0 1px 0 rgba(255,255,255,.7)">
+        <h2 class="flex items-center gap-1.5 text-[13px] font-bold text-brand-700">
+          ${svg('info','w-4 h-4')} Tentang koleksi ini
+        </h2>
+        <p class="mt-2 text-[12.5px] text-ink-700 font-access leading-relaxed">
+          Semua teks sudah disiapkan dalam format Braille dasar (Grade 1 Bahasa Indonesia),
+          sehingga siap dibaca tanpa perlu mengatur berkas. Ketuk buku untuk mulai membaca.
+        </p>
       </div>
     </section>
 
-    <!-- Daftar buku -->
-    <section class="px-5 mt-5 rise" aria-labelledby="lbl-myb">
+    <!-- Daftar buku bawaan -->
+    <section class="px-5 mt-5 rise" aria-labelledby="lbl-lib">
       <div class="flex items-center justify-between">
-        <h2 id="lbl-myb" class="text-[14px] font-bold text-ink-900 tracking-[-0.01em]">Buku Haptic Saya</h2>
-        <span class="text-[11px] font-semibold text-ink-500">${STATE.uploaded.length} buku</span>
+        <h2 id="lbl-lib" class="text-[15px] font-bold text-ink-900 tracking-[-0.012em]">Daftar Buku</h2>
+        <span class="text-[11px] font-semibold text-ink-500">${LIBRARY.length} buku</span>
       </div>
-      <ul class="mt-3 space-y-2.5 stagger" id="uploadList">${list}</ul>
+      <ul class="mt-3 space-y-2.5 stagger">${list}</ul>
     </section>
   </div>`;
 }
@@ -1449,7 +1451,7 @@ function renderProfile() {
         ${profileStat('Karakter dikuasai', p.chars, 'huruf', 'brand')}
         ${profileStat('Akurasi', p.accuracy + '%', '', 'ok')}
         ${profileStat('Hari latihan', p.days, 'hari', 'teal')}
-        ${profileStat('Buku diunggah', STATE.uploaded.length, 'buku', 'warn')}
+        ${profileStat('Buku tersedia', LIBRARY.length, 'buku', 'warn')}
       </div>
 
       <!-- Progres belajar ringkas -->
@@ -1474,7 +1476,8 @@ function renderProfile() {
         ${profileLinkRow('shield', 'Mode Aksesibilitas', 'access')}
         ${profileLinkRow('users', 'Kondisi Pendamping', 'companion')}
         ${profileLinkRow('phone', 'Kontak Darurat', 'contacts')}
-        ${profileLinkRow('upload', 'Unggah Buku Haptic', 'upload')}
+        ${profileLinkRow('book2', 'Koleksi Buku', 'upload')}
+        ${profileLinkRow('check', 'Mode Pengujian (5 Tugas)', 'test')}
       </div>
     </section>
 
@@ -1517,12 +1520,104 @@ function profileLinkRow(icon, title, nav) {
   </button>`;
 }
 
+/* ============ LAYAR 10 : MODE PENGUJIAN (5 tugas dari proposal) ============ */
+
+const TEST_TASKS = [
+  { id: 1, title: 'Membuka Buku',        desc: 'Pilih satu buku dari koleksi, buka detailnya, lalu mulai membaca.' },
+  { id: 2, title: 'Mengenali Karakter',  desc: 'Rasakan pola enam slot haptic dan tentukan karakter yang sedang disimulasikan.' },
+  { id: 3, title: 'Navigasi Kata',       desc: 'Geser kanan untuk kata berikutnya, geser kiri untuk mengulang kata.' },
+  { id: 4, title: 'Mengatur Reader',     desc: 'Ubah kecepatan dan durasi getaran sesuai kenyamanan.' },
+  { id: 5, title: 'Bookmark & Progress', desc: 'Simpan bookmark, keluar reader, lalu lanjutkan dari progress terakhir.' },
+];
+
+function renderTest() {
+  const done = STATE.testDone || [];
+  const pct = Math.round((done.length / TEST_TASKS.length) * 100);
+
+  const rows = TEST_TASKS.map(t => {
+    const ok = done.includes(t.id);
+    return `
+    <li>
+      <div class="surface rounded-2xl p-4">
+        <div class="flex items-start gap-3">
+          <span class="w-8 h-8 shrink-0 rounded-full flex items-center justify-center font-extrabold text-[13px]
+                       ${ok ? 'bg-ok-600 text-white' : 'bg-brand-50 text-brand-600 border border-brand-100'}">
+            ${ok ? svg('check','w-4 h-4',3) : t.id}
+          </span>
+          <div class="min-w-0 flex-1">
+            <p class="text-[14px] font-bold text-ink-900">Tugas ${t.id} — ${t.title}</p>
+            <p class="text-[12px] text-ink-500 mt-1 leading-relaxed">${t.desc}</p>
+          </div>
+        </div>
+        <button type="button" data-task="${t.id}"
+                class="btn-ghost mt-3 w-full min-h-[44px] rounded-xl font-bold text-[13px] border
+                       ${ok ? 'bg-ok-50 text-ok-700 border-ok-600/20' : 'surface text-ink-700'}">
+          ${ok ? 'Selesai — tandai ulang' : 'Mulai Tugas'}
+        </button>
+      </div>
+    </li>`;
+  }).join('');
+
+  return `
+  <div class="pb-6">
+    <div class="px-5 pt-4 rise">
+      <h1 class="text-[21px] font-extrabold text-ink-900 leading-tight tracking-[-0.022em]">Mode Pengujian</h1>
+      <p class="mt-2 text-[13px] leading-relaxed text-ink-500 font-access">
+        Skenario pengujian untuk mengevaluasi keterpahaman alur dan pola haptic.
+        Bukan validasi klinis.
+      </p>
+    </div>
+
+    <!-- Progres pengujian -->
+    <section class="px-5 mt-4 rise">
+      <div class="surface rounded-2xl p-4">
+        <div class="flex items-center justify-between">
+          <span class="text-[12.5px] font-semibold text-ink-900">Progres pengujian</span>
+          <span class="text-[12.5px] font-bold text-brand-600 tabular">${done.length}/${TEST_TASKS.length} (${pct}%)</span>
+        </div>
+        <div class="mt-2 h-2 rounded-full bg-surface overflow-hidden"
+             role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"
+             aria-label="Progres pengujian ${pct} persen">
+          <div class="h-full rounded-full transition-[width] duration-500" style="width:${pct}%; background: linear-gradient(90deg,#2B7BF3,#0B5FCC)"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Daftar tugas -->
+    <section class="px-5 mt-4 rise" aria-labelledby="lbl-tasks">
+      <h2 id="lbl-tasks" class="text-[15px] font-bold text-ink-900 tracking-[-0.012em]">Daftar Tugas</h2>
+      <ul class="mt-3 space-y-2.5 stagger">${rows}</ul>
+    </section>
+
+    <!-- Catatan keterbatasan -->
+    <section class="px-5 mt-4 rise">
+      <div class="rounded-2xl border border-warn-600/20 p-4" style="background:#FFF7ED">
+        <h2 class="flex items-center gap-1.5 text-[13px] font-bold text-warn-700">
+          ${svg('info','w-4 h-4')} Catatan keterbatasan
+        </h2>
+        <ul class="mt-2 space-y-1.5 text-[12px] text-ink-700 font-access leading-relaxed">
+          <li>• Prototipe web tidak menghasilkan getaran di semua perangkat; getaran nyata butuh Android.</li>
+          <li>• Kekuatan getaran tidak dapat diatur lewat web (hanya durasi/pola).</li>
+          <li>• Pengujian proxy tidak mewakili pengalaman deafblind secara utuh.</li>
+        </ul>
+      </div>
+    </section>
+
+    <div class="px-5 mt-5">
+      <button type="button" id="btnTestReset"
+              class="btn-ghost w-full min-h-[48px] rounded-2xl font-bold text-[14px] border border-line text-ink-700">
+        Reset Hasil Pengujian
+      </button>
+    </div>
+  </div>`;
+}
+
 /* -------------------------------------------------------------------------
    4. ROUTER
    ------------------------------------------------------------------------- */
 const SCREENS = {
   splash:    { render: renderSplash,    title: null,            back: false },
-  login:     { render: renderLogin,     title: 'Login',         back: false },
+  login:     { render: renderLogin,     title: 'Mode Caregiver', back: false },
   signup:    { render: renderSignup,    title: 'Buat Akun',     back: false },
   home:      { render: renderHome,      title: null,            back: false },
   dashboard: { render: renderDashboard, title: 'Beranda',       back: true  },
@@ -1531,9 +1626,10 @@ const SCREENS = {
   gesture:   { render: renderGesture,   title: 'Peta Gestur',   back: true  },
   contacts:  { render: renderContacts,  title: 'Kontak Darurat', back: true },
   companion: { render: renderCompanion, title: 'Kondisi Pendamping', back: true },
-  upload:    { render: renderUpload,    title: 'Unggah Buku',   back: true  },
+  upload:    { render: renderUpload,    title: 'Koleksi Buku',  back: true  },
   profile:   { render: renderProfile,   title: 'Profil',        back: true  },
   lesson:    { render: renderLesson,    title: 'Latihan',       back: true  },
+  test:      { render: renderTest,      title: 'Mode Pengujian', back: true },
 };
 
 const NAV_ITEMS = [
@@ -1651,6 +1747,7 @@ function openBook(title) {
     readerWordIdx = 0;
     readerIdx = 0;
   }
+  SAY.bookOpen();                       // kosakata: buku dibuka = 3 getaran pendek
   announce(`Membuka buku ${title}.`, true);
 }
 
@@ -1736,6 +1833,30 @@ function bindScreenEvents() {
   if (STATE.screen === 'upload') bindUploadEvents();
   if (STATE.screen === 'profile') bindProfileEvents();
   if (STATE.screen === 'lesson') bindLessonEvents();
+  if (STATE.screen === 'test') bindTestEvents();
+}
+
+/* --- Mode Pengujian --- */
+function bindTestEvents() {
+  main.querySelectorAll('[data-task]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = +btn.getAttribute('data-task');
+      const arr = STATE.testDone;
+      const i = arr.indexOf(id);
+      if (i >= 0) { arr.splice(i, 1); SAY.repeat(); announce(`Tugas ${id} ditandai belum selesai.`, true); }
+      else { arr.push(id); SAY.wordDone(); announce(`Tugas ${id} selesai.`, true); }
+      try { localStorage.setItem('bh_test_done', JSON.stringify(arr)); } catch (e) {}
+      render();
+    });
+  });
+
+  main.querySelector('#btnTestReset')?.addEventListener('click', () => {
+    STATE.testDone = [];
+    try { localStorage.setItem('bh_test_done', '[]'); } catch (e) {}
+    SAY.error();
+    announce('Hasil pengujian direset.', true);
+    render();
+  });
 }
 
 /* --- Detail modul latihan --- */
@@ -1813,7 +1934,7 @@ function bindLessonEvents() {
           feedbackEl.textContent = correct ? `Benar! Ini "${answer}".` : `Belum tepat. Jawaban: "${answer}".`;
           feedbackEl.style.color = correct ? '#15803D' : '#B91C1C';
         }
-        vibrate(correct ? [22, 60, 22] : [50, 40, 50]);
+        if (correct) { SAY.wordDone(); } else { SAY.error(); }
         announce(correct ? `Benar. Ini ${answer}.` : `Belum tepat. Jawaban yang benar ${answer}.`, true);
         optionsEl.querySelectorAll('[data-answer]').forEach(b => {
           b.style.borderColor = ''; b.style.background = ''; b.setAttribute('aria-pressed', 'false');
@@ -1880,7 +2001,7 @@ function bindProfileEvents() {
 
     const fail = (msg) => {
       if (errEl) { errEl.hidden = false; errEl.textContent = msg; }
-      vibrate([40, 40, 40]);
+      SAY.error();
       announce(msg, true);
       nameEl.focus();
     };
@@ -1934,7 +2055,7 @@ function bindContactEvents() {
     const phone = document.getElementById('cPhone').value.trim();
 
     if (!name || !phone) {
-      vibrate([40, 40, 40]);
+      SAY.error();
       announce('Nama dan nomor telepon wajib diisi.', true);
       (!name ? document.getElementById('cName') : document.getElementById('cPhone')).focus();
       return;
@@ -1977,42 +2098,11 @@ function bindCompanionEvents() {
   });
 }
 
-/* --- Unggah Buku Haptic --- */
+/* --- Koleksi Buku Bawaan --- */
 function bindUploadEvents() {
-  // Nama file tampil saat dipilih
-  const fileInput = main.querySelector('#upFile');
-  const fileName = main.querySelector('#upFileName');
-  fileInput?.addEventListener('change', () => {
-    const f = fileInput.files && fileInput.files[0];
-    if (fileName) fileName.textContent = f ? f.name : 'Ketuk untuk memilih file';
-    if (f) announce(`File ${f.name} dipilih.`, true);
-  });
-
-  main.querySelector('#btnUpload')?.addEventListener('click', () => {
-    const title  = document.getElementById('upTitle').value.trim();
-    const author = document.getElementById('upAuthor').value.trim() || 'Tanpa penulis';
-    const pages  = parseInt(document.getElementById('upPages').value, 10) || 0;
-
-    if (!title) {
-      vibrate([40, 40, 40]);
-      announce('Judul buku wajib diisi.', true);
-      document.getElementById('upTitle').focus();
-      return;
-    }
-
-    const file = fileInput?.files?.[0];
-    STATE.uploaded.push({
-      title,
-      author,
-      pages: pages || '—',
-      file: file ? file.name : null,
-    });
-    try { localStorage.setItem('bh_uploaded', JSON.stringify(STATE.uploaded)); } catch (e) {}
-
-    vibrate([22, 60, 22]);
-    announce(`Buku ${title} berhasil diunggah.`, true);
-    render();
-  });
+  // Tombol buku memakai [data-nav="reader"] + [data-open-book], yang sudah
+  // ditangani oleh bindNav(). Di sini cukup mengumumkan konteks koleksi.
+  // (Tidak ada lagi impor berkas — sesuai batasan proposal.)
 }
 
 /* -------------------------------------------------------------------------
@@ -2025,6 +2115,17 @@ function vibrate(pattern) {
     try { navigator.vibrate(pattern); } catch (e) { /* diabaikan */ }
   }
 }
+
+/* Kosakata haptic (lihat tabel di proposal) */
+const SAY = {
+  bookOpen:   () => hapticSay('bookOpen'),
+  start:      () => hapticSay('start'),
+  wordDone:   () => hapticSay('wordDone'),
+  repeat:     () => hapticSay('repeat'),
+  bookmark:   () => hapticSay('bookmark'),
+  chapterEnd: () => hapticSay('chapterEnd'),
+  error:      () => hapticSay('error'),
+};
 
 /* Pola haptic khusus untuk animasi */
 const ANIM_HAPTIC = {
@@ -2062,7 +2163,7 @@ function handleLogin(btn) {
   if (!email || !pass) {
     announce('Email dan kata sandi wajib diisi.', true);
     if (emailEl) emailEl.focus();
-    vibrate([40, 40, 40]);
+    SAY.error();
     return;
   }
 
@@ -2115,7 +2216,7 @@ function handleSignup(btn) {
   const conf  = (confEl && confEl.value) || '';
 
   // Validasi berurutan dengan pesan spesifik + fokus ke field bermasalah
-  const fail = (msg, el) => { showFormError(msg); vibrate([40, 40, 40]); if (el) el.focus(); };
+  const fail = (msg, el) => { showFormError(msg); SAY.error(); if (el) el.focus(); };
 
   if (!name)                 return fail('Nama lengkap wajib diisi.', nameEl);
   if (!email)                return fail('Email wajib diisi.', emailEl);
@@ -2207,6 +2308,7 @@ function bindReaderEvents() {
     play.style.background = 'linear-gradient(180deg,#FFD700 0%,#F59E0B 100%)';
     play.style.color = '#0A3D80';
 
+    SAY.start();                        // kosakata: mulai membaca = 1 getaran panjang
     announce(HAPTIC.supported ? 'Auto-baca aktif. Rasakan getaran.' : 'Auto-baca aktif. Simulasi visual.', true);
 
     // Baca semua kata secara berurutan dari posisi saat ini
@@ -2316,7 +2418,7 @@ function bindReaderGestures(status, onStop) {
     highlightCell(0);
     updateHapticStatus(status, w[0]);
     announce(`Kata berikutnya: ${w}`, true);
-    if (HAPTIC.supported) navigator.vibrate([30, 50, 30]);
+    SAY.wordDone();                     // kosakata: kata selesai = 2 getaran pendek
   }
 
   function prevWord() {
@@ -2329,13 +2431,13 @@ function bindReaderGestures(status, onStop) {
     highlightCell(0);
     updateHapticStatus(status, w[0]);
     announce(`Kata sebelumnya: ${w}`, true);
-    if (HAPTIC.supported) navigator.vibrate([60]);
+    SAY.repeat();                       // kosakata: ulangi = 1 getaran sedang
   }
 
   function exitReader() {
     if (onStop) onStop();
     announce('Keluar dari mode baca.', true);
-    if (HAPTIC.supported) navigator.vibrate([80, 40, 80]);
+    SAY.chapterEnd();                   // kosakata: akhir bagian = 1 panjang + 2 pendek
     setTimeout(() => {
       go('dashboard');
       history.pushState({ screen: 'dashboard' }, '');
@@ -2345,6 +2447,7 @@ function bindReaderGestures(status, onStop) {
   function repeatWord() {
     const w = getReaderWord();
     announce(`Mengulang kata: ${w}`, true);
+    SAY.repeat();
     HAPTIC.buzzText(w, (i, ch) => {
       readerIdx = i;
       drawBraille(ch.toUpperCase(), true);
@@ -2355,7 +2458,7 @@ function bindReaderGestures(status, onStop) {
 
   function saveBookmark() {
     announce(`Bookmark disimpan di kata ${readerWordIdx + 1}: ${getReaderWord()}`, true);
-    if (HAPTIC.supported) navigator.vibrate([40, 30, 40, 30, 120]);
+    SAY.bookmark();                     // kosakata: 1 pendek + 1 sedang
     showToast(`Bookmark disimpan — "${getReaderWord()}"`);
   }
 

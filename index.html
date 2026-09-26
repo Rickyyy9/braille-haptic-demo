@@ -975,7 +975,37 @@ const HAPTIC = {
   stop() { this._stop = true; if (this.supported) navigator.vibrate(0); },
   _stop: false,
   _sleep: (ms) => new Promise(r => setTimeout(r, ms)),
+
+  /* =====================================================================
+     KOSAKATA FEEDBACK HAPTIC (sesuai tabel proposal)
+     Pola [getar, jeda, getar, ...] dalam milidetik.
+     Catatan: Web Vibration API hanya bisa mengatur DURASI, bukan kekuatan.
+     "Pendek/Sedang/Panjang" di proposal diterjemahkan sebagai durasi.
+     ===================================================================== */
+  VOCAB: {
+    bookOpen:   [22, 70, 22, 70, 22],       // Buku dibuka  — 3 getaran pendek
+    start:      [220],                       // Mulai membaca — 1 getaran panjang
+    charDone:   [0, 190],                    // Karakter selesai — jeda lebih panjang
+    wordDone:   [26, 60, 26],                // Kata selesai — 2 getaran pendek
+    repeat:     [90],                        // Ulangi — 1 getaran sedang
+    bookmark:   [22, 60, 90],                // Bookmark — 1 pendek + 1 sedang
+    chapterEnd: [220, 70, 26, 60, 26],       // Akhir bab — 1 panjang + 2 pendek
+    error:      [260],                       // Error — 1 getaran panjang
+  },
+
+  /* Getarkan sebuah kosakata feedback */
+  say(name) {
+    const p = this.VOCAB[name];
+    if (!p || !this.supported || !this.enabled) return false;
+    try { navigator.vibrate(p); } catch (e) { /* diabaikan */ }
+    return true;
+  },
 };
+
+/* Fungsi pembantu global agar mudah dipanggil dari app.js */
+function hapticSay(name) {
+  return (typeof HAPTIC !== 'undefined' && HAPTIC.say) ? HAPTIC.say(name) : false;
+}
 </script>
 
 <!-- Modul layar + bootstrap (diisi di file berikutnya) -->
