@@ -46,6 +46,28 @@ const STATE = {
 };
 
 /* -------------------------------------------------------------------------
+   1b. KALIMAT READER — sumber tunggal agar kalimat & kata selalu sinkron
+   ------------------------------------------------------------------------- */
+
+/* Kalimat lengkap (dari Figma). Kata target di dalamnya = "kami". */
+const READER_PREFIX  = 'Suara lincong tua berdenting nyaring di halaman sekolah ';
+const READER_WORD    = 'kami';   // kata yang dibaca haptic — ada di dalam kalimat
+const READER_SUFFIX  = ' yang sunyi.';
+
+/* Bangun HTML kalimat: tiap huruf kata target jadi <span> agar bisa ditandai
+   di posisi yang benar (bukan selalu di huruf pertama). */
+function buildSentenceHTML() {
+  const letters = [...READER_WORD].map((ch, i) => {
+    const isFirst = i === 0;
+    return `<span class="reader-letter${isFirst ? ' is-active' : ''}" data-idx="${i}">${ch}</span>`;
+  }).join('');
+  return `${READER_PREFIX}<span id="readerWord" class="font-bold">${letters}</span>${READER_SUFFIX}`;
+}
+const SENTENCE_HTML = buildSentenceHTML();
+
+/* Gaya huruf aktif di kalimat (dipakai via <style> global) */
+
+/* -------------------------------------------------------------------------
    2. IKON SVG (Phosphor-style, stroke konsisten)
    ------------------------------------------------------------------------- */
 const ICON = {
@@ -386,10 +408,7 @@ function renderReader() {
       <div class="rounded-2xl p-4 border border-line"
            style="background: linear-gradient(180deg,#F8FBFF,#F1F6FC); box-shadow: inset 0 1px 0 rgba(255,255,255,.8)">
         <h2 id="lbl-sentence" class="sr-only">Kalimat yang sedang dibaca</h2>
-        <p class="text-[16px] leading-[1.75] text-ink-900 font-access">
-          Suara lincong tua berdenting nyaring di halaman sekolah
-          <mark id="markChar" class="bg-brand-100 text-brand-800 font-bold rounded-md px-1.5 py-0.5 ring-1 ring-brand-200">k</mark>ami yang sunyi.
-        </p>
+        <p class="text-[16px] leading-[1.75] text-ink-900 font-access">${SENTENCE_HTML}</p>
       </div>
     </section>
 
@@ -785,12 +804,25 @@ function renderGesture() {
       </div>
     </section>
 
-    <!-- Daftar contoh huruf -->
+    <!-- Daftar contoh huruf — A sampai Z lengkap -->
     <section class="px-5 mt-5" aria-labelledby="lbl-ex">
-      <h2 id="lbl-ex" class="text-[14px] font-bold text-ink-900 tracking-[-0.01em]">Contoh Pola</h2>
-      <ul class="mt-3 grid grid-cols-2 gap-2.5 stagger">
-        ${['A','B','C','K','L','M'].map(ch => gestureExample(ch)).join('')}
-      </ul>
+      <div class="flex items-end justify-between">
+        <h2 id="lbl-ex" class="text-[14px] font-bold text-ink-900 tracking-[-0.01em]">Pola Huruf A&ndash;Z</h2>
+        <span class="text-[11px] font-semibold text-ink-500">26 huruf</span>
+      </div>
+      <p class="text-[11.5px] text-ink-500 mt-1">Ketuk huruf untuk merasakan pola getarannya.</p>
+
+      ${['A–J', 'K–T', 'U–Z'].map((label, gi) => {
+        const groups = [['A','B','C','D','E','F','G','H','I','J'],
+                        ['K','L','M','N','O','P','Q','R','S','T'],
+                        ['U','V','W','X','Y','Z']];
+        const chips = groups[gi].map(ch => gestureExample(ch)).join('');
+        return `
+        <div class="mt-3">
+          <p class="text-[10.5px] font-bold uppercase tracking-[0.12em] text-ink-500 mb-2">${label}</p>
+          <ul class="grid grid-cols-5 gap-2 stagger">${chips}</ul>
+        </div>`;
+      }).join('')}
     </section>
   </div>`;
 }
@@ -798,14 +830,14 @@ function renderGesture() {
 function gestureExample(ch) {
   const dots = HAPTIC.dotsFor(ch) || [];
   const layout = [1, 4, 2, 5, 3, 6];
+  const dotList = dots.join(' ');
   return `
   <li>
-    <button type="button" data-feel="${ch}" aria-label="Huruf ${ch}, ${dots.length} titik"
-            class="surface surface-interactive w-full flex items-center gap-3 rounded-2xl p-3 group">
-      <span class="w-11 h-11 shrink-0 rounded-xl text-brand-600 border border-brand-100 flex items-center justify-center text-[20px] font-extrabold transition-transform duration-200 group-hover:scale-[1.05]"
-            style="background: linear-gradient(160deg,#EEF5FF,#D9E8FF)">${ch}</span>
-      <span class="grid grid-cols-2 gap-x-2 gap-y-1" aria-hidden="true">
-        ${layout.map(n => `<span class="w-2.5 h-2.5 rounded-full transition-colors ${dots.includes(n) ? 'bg-brand-600' : 'bg-brand-100'}"></span>`).join('')}
+    <button type="button" data-feel="${ch}" aria-label="Huruf ${ch}, titik braille ${dotList || 'tidak ada'}"
+            class="surface surface-interactive w-full flex flex-col items-center gap-2 rounded-2xl p-2.5 pt-3 group">
+      <span class="text-[18px] font-extrabold text-brand-600 transition-transform duration-200 group-hover:scale-[1.08]">${ch}</span>
+      <span class="grid grid-cols-2 gap-x-1.5 gap-y-1" aria-hidden="true">
+        ${layout.map(n => `<span class="w-2 h-2 rounded-full transition-colors ${dots.includes(n) ? 'bg-brand-600' : 'bg-brand-100'}"></span>`).join('')}
       </span>
     </button>
   </li>`;
@@ -964,17 +996,17 @@ function bindScreenEvents() {
 
 /* --- Reader --- */
 let readerIdx = 0;
-const READER_WORD = 'kaba';
 
 function bindReaderEvents() {
-  drawBraille('K');
+  drawBraille(READER_WORD[0].toUpperCase());
+  markCharByIndex(0);
   const status = main.querySelector('#hapticStatus');
 
   main.querySelector('#btnFeel').addEventListener('click', async () => {
-    const ch = READER_WORD[readerIdx] || 'k';
+    const ch = READER_WORD[readerIdx] || READER_WORD[0];
     updateHapticStatus(status, ch);
     drawBraille(ch.toUpperCase(), true);
-    markChar(ch);
+    markCharByIndex(readerIdx);
     await HAPTIC.buzzText(ch);
   });
 
@@ -992,8 +1024,9 @@ function bindReaderEvents() {
     if (playing) {
       announce(HAPTIC.supported ? 'Memutar pola braille. Rasakan getaran.' : 'Getaran tidak tersedia. Menampilkan simulasi visual.', true);
       await HAPTIC.buzzText(READER_WORD, (i, ch) => {
+        readerIdx = i;
         drawBraille(ch.toUpperCase(), true);
-        markChar(ch);
+        markCharByIndex(i);
         updateHapticStatus(status, ch);
       });
       playing = false;
@@ -1020,15 +1053,21 @@ function bindReaderEvents() {
 
 function previewChar(i, status) {
   const ch = READER_WORD[i];
+  readerIdx = i;
   drawBraille(ch.toUpperCase(), true);
-  markChar(ch);
+  markCharByIndex(i);
   updateHapticStatus(status, ch);
-  announce(`Karakter ${i + 1} dari ${READER_WORD.length}: ${ch}`);
+  announce(`Huruf ${i + 1} dari ${READER_WORD.length}: ${ch}`);
 }
 
-function markChar(ch) {
-  const m = document.getElementById('markChar');
-  if (m) m.textContent = ch;
+/* Tandai huruf aktif di kalimat berdasarkan POSISI (indeks), bukan isi huruf.
+   Ini yang membuat penanda ikut bergeser mengikuti huruf yang dibaca. */
+function markCharByIndex(idx) {
+  const word = document.getElementById('readerWord');
+  if (!word) return;
+  word.querySelectorAll('.reader-letter').forEach((el, i) => {
+    el.classList.toggle('is-active', i === idx);
+  });
 }
 
 function drawBraille(letter, animate = false) {

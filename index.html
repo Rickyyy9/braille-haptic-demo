@@ -196,6 +196,19 @@
   }
   .dot.on { background: #0B5FCC; opacity: 1; transform: scale(1.06); }
 
+  /* Huruf aktif di kalimat Reader — sinkron dengan sel braille */
+  .reader-letter {
+    display: inline-block; padding: 0 1px; border-radius: 6px;
+    transition: background-color .16s var(--ease-out),
+                color .16s var(--ease-out),
+                transform .16s var(--ease-spring);
+  }
+  .reader-letter.is-active {
+    background: #D9E8FF; color: #0A3D80;
+    box-shadow: 0 0 0 1px #B7D2FF;
+    transform: scale(1.06);
+  }
+
   /* Cell braille besar untuk layar Reader */
   .bdot {
     width: 34px; height: 34px; border-radius: 9999px;
