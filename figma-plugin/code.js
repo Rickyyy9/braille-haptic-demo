@@ -3,6 +3,11 @@ const FRAME_KEYS = [
   '06-reader', '06b-reader-aktif', '06c-reader-pengaturan', '07-practice',
   '08-gesture', '09-contacts', '10-companion', '11-upload', '12-profile',
   '13-test', '14-lesson', '14b-lesson-kata',
+  '15-reader-bumi', '15b-reader-bumi-aktif', '15c-reader-bumi-pengaturan',
+  '16-reader-panduan', '16b-reader-panduan-aktif', '16c-reader-panduan-pengaturan',
+  '17-reader-catatan', '17b-reader-catatan-aktif', '17c-reader-catatan-pengaturan',
+  '18-reader-kancil', '18b-reader-kancil-aktif', '18c-reader-kancil-pengaturan',
+  '19-reader-kata', '19b-reader-kata-aktif', '19c-reader-kata-pengaturan',
 ];
 
 const NO_NAV = ['01-splash', '02-login', '03-signup'];
@@ -26,17 +31,15 @@ const LINKS = [
   { from: '04-home', find: 'Kontak Darurat', to: '09-contacts' },
   { from: '04-home', find: 'Kondisi Pendamping', to: '10-companion' },
   { from: '04-home', find: 'Koleksi Buku', to: '11-upload' },
-  { from: '04-home', find: 'Bumi Manusia', to: '06-reader' },
-  { from: '04-home', find: 'Lihat koleksi', to: '11-upload' },
 
   { from: '05-dashboard', find: 'Lanjutkan Membaca', to: '06-reader' },
   { from: '05-dashboard', find: 'Baca Toka', to: '06-reader' },
   { from: '05-dashboard', find: 'Koleksi Buku', to: '11-upload' },
   { from: '05-dashboard', find: 'Latihan Braille', to: '07-practice' },
   { from: '05-dashboard', find: 'Lihat koleksi', to: '11-upload' },
-  { from: '05-dashboard', find: 'Bumi Manusia', to: '06-reader' },
-  { from: '05-dashboard', find: 'Panduan Braille Dasar', to: '06-reader' },
-  { from: '05-dashboard', find: 'Catatan Harian Sahabat', to: '06-reader' },
+  { from: '05-dashboard', find: 'Bumi Manusia', to: '15-reader-bumi' },
+  { from: '05-dashboard', find: 'Panduan Braille Dasar', to: '16-reader-panduan' },
+  { from: '05-dashboard', find: 'Catatan Harian Sahabat', to: '17-reader-catatan' },
 
   { from: '06-reader', find: 'LANJUTKAN MEMBACA', to: '06b-reader-aktif', t: 'smart' },
   { from: '06b-reader-aktif', find: 'Atur Kecepatan & Jeda', to: '06c-reader-pengaturan', t: 'smart' },
@@ -50,11 +53,11 @@ const LINKS = [
   { from: '07-practice', find: 'Alfabet Penutup', to: '14-lesson' },
 
   { from: '11-upload', find: 'Laskar Pelangi', to: '06-reader' },
-  { from: '11-upload', find: 'Bumi Manusia', to: '06-reader' },
-  { from: '11-upload', find: 'Panduan Braille Dasar', to: '06-reader' },
-  { from: '11-upload', find: 'Catatan Harian Sahabat', to: '06-reader' },
-  { from: '11-upload', find: 'Kancil Menyeberangi Sungai', to: '06-reader' },
-  { from: '11-upload', find: 'Kata Sehari-hari', to: '06-reader' },
+  { from: '11-upload', find: 'Bumi Manusia', to: '15-reader-bumi' },
+  { from: '11-upload', find: 'Panduan Braille Dasar', to: '16-reader-panduan' },
+  { from: '11-upload', find: 'Catatan Harian Sahabat', to: '17-reader-catatan' },
+  { from: '11-upload', find: 'Kancil Menyeberangi Sungai', to: '18-reader-kancil' },
+  { from: '11-upload', find: 'Kata Sehari-hari', to: '19-reader-kata' },
 
   { from: '12-profile', find: 'Kondisi Pendamping', to: '10-companion' },
   { from: '12-profile', find: 'Kontak Darurat', to: '09-contacts' },
@@ -72,11 +75,35 @@ const FRAME_LINKS = [
   { from: '06c-reader-pengaturan', to: '05-dashboard', trigger: { type: 'ON_DRAG' } },
 ];
 
+/* Reader per buku (varian Laskar tetap 06/06b/06c):
+   default -> aktif -> pengaturan dengan Smart Animate, geser = kembali ke Library */
+const READER_SETS = [
+  ['15-reader-bumi', '15b-reader-bumi-aktif', '15c-reader-bumi-pengaturan'],
+  ['16-reader-panduan', '16b-reader-panduan-aktif', '16c-reader-panduan-pengaturan'],
+  ['17-reader-catatan', '17b-reader-catatan-aktif', '17c-reader-catatan-pengaturan'],
+  ['18-reader-kancil', '18b-reader-kancil-aktif', '18c-reader-kancil-pengaturan'],
+  ['19-reader-kata', '19b-reader-kata-aktif', '19c-reader-kata-pengaturan'],
+];
+for (const [def, aktif, tune] of READER_SETS) {
+  LINKS.push(
+    { from: def, find: 'LANJUTKAN MEMBACA', to: aktif, t: 'smart' },
+    { from: aktif, find: 'Atur Kecepatan & Jeda', to: tune, t: 'smart' },
+    { from: aktif, find: 'Jeda', exact: true, to: def, t: 'smart' },
+    { from: tune, find: 'Atur Kecepatan & Jeda', to: def, t: 'smart' },
+  );
+  FRAME_LINKS.push(
+    { from: def, to: '05-dashboard', trigger: { type: 'ON_DRAG' } },
+    { from: aktif, to: '05-dashboard', trigger: { type: 'ON_DRAG' } },
+    { from: tune, to: '05-dashboard', trigger: { type: 'ON_DRAG' } },
+  );
+}
+
 function norm(s) {
   return (s || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
 }
 
 function transition(t) {
+  if (t === 'instant') return null;
   return t === 'smart'
     ? { type: 'SMART_ANIMATE', easing: { type: 'EASE_IN_AND_OUT' }, duration: 0.35 }
     : { type: 'DISSOLVE', easing: { type: 'EASE_OUT' }, duration: 0.3 };
@@ -102,6 +129,137 @@ async function setReaction(node, reaction) {
   }
 }
 
+async function tryReactions(node, reactions) {
+  let last = null;
+  for (const r of reactions) {
+    try {
+      await setReaction(node, r);
+      return null;
+    } catch (e) {
+      last = e;
+    }
+  }
+  return last;
+}
+
+function errText(e) {
+  if (e === null || e === undefined) return 'unknown error';
+  if (typeof e === 'string') return e;
+  if (e.message) return e.message;
+  try { return JSON.stringify(e); } catch (_) { return String(e); }
+}
+
+/* ==== Hover kartu huruf A-Z (While hovering -> State=Hover) ==== */
+
+const CARD_STROKE = { r: 138 / 255, g: 182 / 255, b: 1 }; /* #8AB6FF, ikut .surface-interactive:hover */
+const CARD_SHADOWS = [
+  { type: 'DROP_SHADOW', color: { r: 11 / 255, g: 22 / 255, b: 32 / 255, a: 0.05 }, offset: { x: 0, y: 2 }, radius: 4, spread: 0, visible: true, blendMode: 'NORMAL' },
+  { type: 'DROP_SHADOW', color: { r: 11 / 255, g: 95 / 255, b: 204 / 255, a: 0.28 }, offset: { x: 0, y: 10 }, radius: 22, spread: -10, visible: true, blendMode: 'NORMAL' },
+];
+
+function mkChangeTo(destinationId, smart) {
+  return {
+    trigger: { type: 'ON_HOVER' },
+    actions: [{
+      type: 'NODE',
+      destinationId,
+      navigation: 'CHANGE_TO',
+      transition: smart
+        ? { type: 'SMART_ANIMATE', easing: { type: 'EASE_OUT' }, duration: 0.15 }
+        : null,
+    }],
+  };
+}
+
+function hasDotGrid(n) {
+  try {
+    return n.findAll(d =>
+      d.type !== 'TEXT' && d.width > 2 && d.width <= 14 && d.height > 2 && d.height <= 14
+    ).length >= 4;
+  } catch (_) { return false; }
+}
+
+function findLetterCards(gFrame) {
+  const texts = gFrame.findAll(n =>
+    n.type === 'TEXT' && /^[A-Z]$/.test((n.characters || '').trim())
+  );
+  const cards = {};
+  const already = [];
+  for (const t of texts) {
+    const ch = t.characters.trim();
+    if (cards[ch] || already.indexOf(ch) >= 0) continue;
+    let cur = t;
+    let best = null;
+    let bestDots = null;
+    let converted = false;
+    while (cur.parent && cur.parent.id !== gFrame.id && cur.parent.type !== 'PAGE') {
+      const p = cur.parent;
+      if (p.type === 'INSTANCE' || p.type === 'COMPONENT' || p.type === 'COMPONENT_SET') {
+        converted = true;
+        break;
+      }
+      const okType = p.type === 'FRAME' || p.type === 'GROUP';
+      const okSize = p.width >= 30 && p.width <= 110 && p.height >= 40 && p.height <= 135;
+      if (okType && okSize) {
+        best = p;
+        if (hasDotGrid(p)) bestDots = p;
+      }
+      cur = p;
+    }
+    if (converted) already.push(ch);
+    else if (bestDots || best) cards[ch] = bestDots || best;
+  }
+  const missing = [];
+  for (const ch of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') {
+    if (!cards[ch] && already.indexOf(ch) < 0) missing.push(ch);
+  }
+  return { cards, already, missing };
+}
+
+function styleHoverVariant(comp) {
+  const nodes = [comp].concat(comp.findAll(() => true));
+  const shadowHolder =
+    nodes.find(n => n.type !== 'TEXT' && n.effects && n.effects.some(e => e.type === 'DROP_SHADOW')) ||
+    nodes.find(n => (n.type === 'FRAME' || n.type === 'RECTANGLE') &&
+      n.fills !== figma.mixed && Array.isArray(n.fills) &&
+      n.fills.some(f => f.type === 'SOLID' && f.visible !== false &&
+        f.color.r > 0.85 && f.color.g > 0.85 && f.color.b > 0.85)) ||
+    comp;
+  const whiteFrame =
+    nodes.find(n => (n.type === 'FRAME' || n.type === 'RECTANGLE') &&
+      n.fills !== figma.mixed && Array.isArray(n.fills) &&
+      n.fills.some(f => f.type === 'SOLID' && f.visible !== false &&
+        f.color.r > 0.85 && f.color.g > 0.85 && f.color.b > 0.85)) ||
+    null;
+
+  let strokeFound = false;
+  for (const n of nodes) {
+    if (n.type === 'TEXT' || !n.strokes || !n.strokes.length) continue;
+    try {
+      n.strokes = n.strokes.map(s => (s.type === 'SOLID' ? Object.assign({}, s, { color: CARD_STROKE }) : s));
+      strokeFound = true;
+    } catch (_) { /* node tak mendukung stroke — abaikan */ }
+  }
+
+  try {
+    const keep = (shadowHolder.effects || []).filter(e => e.type !== 'DROP_SHADOW');
+    shadowHolder.effects = keep.concat(CARD_SHADOWS);
+  } catch (_) { /* efek gagal — abaikan */ }
+
+  if (!strokeFound && whiteFrame) {
+    try {
+      whiteFrame.strokes = [{ type: 'SOLID', color: CARD_STROKE, opacity: 1 }];
+      whiteFrame.strokeWeight = 1;
+      whiteFrame.strokeAlign = 'INSIDE';
+    } catch (_) { /* stroke gagal — abaikan */ }
+  }
+
+  const letter = nodes.find(n => n.type === 'TEXT' && /^[A-Z]$/.test((n.characters || '').trim()));
+  if (letter && letter.fontSize !== figma.mixed) {
+    try { letter.fontSize = Math.round(letter.fontSize * 1.08 * 2) / 2; } catch (_) { /* campuran — abaikan */ }
+  }
+}
+
 function score(frameName, key) {
   const f = norm(frameName);
   const k = norm(key);
@@ -121,13 +279,18 @@ function isTopFrame(n) {
 function pickHotspot(text, frame) {
   let best = text;
   let bestH = text.height || 0;
+  const wMaxCard = frame.width * 0.75;
+  const wMaxButton = frame.width * 0.95;
   let cur = text;
   while (cur.parent && cur.parent.id !== frame.id && cur.parent.type !== 'PAGE') {
     cur = cur.parent;
     const h = cur.height || 0;
     const w = cur.width || 0;
     const okType = ['GROUP', 'FRAME', 'INSTANCE', 'COMPONENT', 'RECTANGLE'].includes(cur.type);
-    if (okType && h <= 160 && h >= bestH && w <= frame.width * 0.75) {
+    /* kartu: sempit (<=75% lebar) dan pendek; tombol full-width: tinggi <=96px */
+    const okCard = h <= 160 && w <= wMaxCard;
+    const okButton = h <= 96 && w <= wMaxButton;
+    if (okType && (okCard || okButton) && h >= bestH) {
       best = cur;
       bestH = h;
     }
@@ -208,7 +371,7 @@ async function main() {
         wired++;
       }
     } catch (e) {
-      errors.push(`${link.from} > "${link.find}": ${e.message}`);
+      errors.push(`${link.from} > "${link.find}": ${errText(e)}`);
     }
   }
 
@@ -235,7 +398,7 @@ async function main() {
           wired++;
         }
       } catch (e) {
-        errors.push(`nav ${key} > ${label}: ${e.message}`);
+        errors.push(`nav ${key} > ${label}: ${errText(e)}`);
       }
     }
   }
@@ -247,11 +410,20 @@ async function main() {
       const src = resolved[fl.from];
       const dst = resolved[fl.to];
       if (!src || !dst) { lines.push(`MISS  ${fl.from} -> ${fl.to}`); continue; }
-      await setReaction(src.node, mkReaction(dst.node.id, 'dissolve', fl.trigger));
-      wired++;
-      lines.push(`OK    ${fl.from} -> ${fl.to}  (${fl.trigger.type})`);
+      const err = await tryReactions(src.node, [
+        mkReaction(dst.node.id, 'instant', fl.trigger),
+        mkReaction(dst.node.id, 'smart', fl.trigger),
+        mkReaction(dst.node.id, 'dissolve', fl.trigger),
+      ]);
+      if (err) {
+        errors.push(`${fl.from} frame-link (${fl.trigger.type}): ${errText(err)}`);
+        lines.push(`MISS  ${fl.from} -> ${fl.to}  (${fl.trigger.type})`);
+      } else {
+        wired++;
+        lines.push(`OK    ${fl.from} -> ${fl.to}  (${fl.trigger.type})`);
+      }
     } catch (e) {
-      errors.push(`${fl.from} frame-link: ${e.message}`);
+      errors.push(`${fl.from} frame-link: ${errText(e)}`);
     }
   }
 
@@ -263,7 +435,90 @@ async function main() {
       lines.push('OK    flow starting point -> 01-splash');
     }
   } catch (e) {
-    errors.push(`flow starting point: ${e.message}`);
+    errors.push(`flow starting point: ${errText(e)}`);
+  }
+
+  lines.push('');
+  lines.push('== HOVER KARTU A-Z ==');
+  try {
+    const g = resolved['08-gesture'];
+    if (!g) {
+      lines.push('MISS  HOVER A-Z: frame 08-gesture tak ditemukan');
+      missingHotspots.push('hover A-Z: frame 08-gesture tak ditemukan');
+    } else {
+      const found = findLetterCards(g.node);
+      const fresh = Object.keys(found.cards).sort();
+      if (found.missing.length) {
+        const detail = `huruf tak ditemukan: ${found.missing.join(', ')}`;
+        lines.push(`MISS  HOVER A-Z: ${detail}`);
+        missingHotspots.push(`hover A-Z (${found.missing.length}): ${detail}`);
+      }
+      if (fresh.length) {
+        let maxBottom = 0;
+        for (const c of g.page.children) {
+          if ('y' in c && 'height' in c) {
+            maxBottom = Math.max(maxBottom, c.y + c.height);
+          }
+        }
+        const parkX = g.node.x;
+        const parkY = maxBottom + 200;
+        let ok = 0;
+        const fail = [];
+        let i = 0;
+        for (const ch of fresh) {
+          i++;
+          try {
+            const card = found.cards[ch];
+            const parent = card.parent;
+            const idx = parent.children.indexOf(card);
+            const x0 = card.x;
+            const y0 = card.y;
+            const comp = figma.createComponentFromNode(card);
+            const hover = comp.clone();
+            styleHoverVariant(hover);
+            const inst = comp.createInstance();
+            parent.insertChild(idx, inst);
+            if (!parent.layoutMode || parent.layoutMode === 'NONE') {
+              inst.x = x0;
+              inst.y = y0;
+            }
+            const set = figma.combineAsVariants([comp, hover], g.page);
+            set.name = 'Kartu Huruf ' + ch;
+            comp.name = 'State=Default';
+            hover.name = 'State=Hover';
+            try {
+              comp.x = 16;
+              comp.y = 16;
+              hover.x = 16;
+              hover.y = 16 + comp.height + 16;
+              set.resizeWithoutConstraints(
+                Math.max(comp.width, hover.width) + 32,
+                16 + comp.height + 16 + hover.height + 16
+              );
+            } catch (_) { /* penataan kosmetik gagal — abaikan */ }
+            set.x = parkX;
+            set.y = parkY + i * 130;
+            const err = await tryReactions(comp, [
+              mkChangeTo(hover.id, true),
+              mkChangeTo(hover.id, false),
+            ]);
+            if (err) fail.push(`${ch}: ${errText(err)}`);
+            else ok++;
+          } catch (e) {
+            fail.push(`${ch}: ${errText(e)}`);
+          }
+        }
+        if (ok) {
+          const extra = found.already.length ? `, ${found.already.length} sudah ada sebelumnya` : '';
+          lines.push(`OK    HOVER A-Z: ${ok} kartu terpasang${extra}`);
+        }
+        for (const f of fail) errors.push(`HOVER A-Z ${f}`);
+      } else if (found.already.length) {
+        lines.push(`OK    HOVER A-Z: sudah terpasang (${found.already.length} kartu)`);
+      }
+    }
+  } catch (e) {
+    errors.push(`HOVER A-Z: ${errText(e)}`);
   }
 
   lines.push('');
@@ -322,6 +577,6 @@ figma.ui.onmessage = (msg) => {
 };
 
 main().catch(e => {
-  figma.notify('Plugin error: ' + e.message, { error: true });
+  figma.notify('Plugin error: ' + errText(e), { error: true });
   figma.closePlugin();
 });

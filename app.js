@@ -1363,12 +1363,12 @@ function renderCompanion() {
 /* Koleksi teks bawaan aplikasi (sesuai batasan proposal: tanpa impor).
    Teks sudah disiapkan dalam Braille dasar/Grade 1 Bahasa Indonesia. */
 const LIBRARY = [
-  { title: 'Laskar Pelangi',             author: 'Andrea Hirata',          pages: 68,  level: 'Cerita' },
-  { title: 'Bumi Manusia',               author: 'Pramoedya Ananta Toer',  pages: 120, level: 'Novel' },
-  { title: 'Panduan Braille Dasar',      author: 'Modul Latihan Haptic',   pages: 40,  level: 'Panduan' },
-  { title: 'Catatan Harian Sahabat',     author: 'Kumpulan Cerpen',        pages: 52,  level: 'Cerpen' },
-  { title: 'Kancil Menyeberangi Sungai', author: 'Cerita Rakyat',          pages: 24,  level: 'Dongeng' },
-  { title: 'Kata Sehari-hari',           author: 'Kosakata Latihan',       pages: 18,  level: 'Latihan' },
+  { title: 'Laskar Pelangi',             author: 'Andrea Hirata',          pages: 68,  level: 'Cerita',  progress: 68 },
+  { title: 'Bumi Manusia',               author: 'Pramoedya Ananta Toer',  pages: 120, level: 'Novel',   progress: 84 },
+  { title: 'Panduan Braille Dasar',      author: 'Modul Latihan Haptic',   pages: 40,  level: 'Panduan', progress: 100 },
+  { title: 'Catatan Harian Sahabat',     author: 'Kumpulan Cerpen',        pages: 52,  level: 'Cerpen',  progress: 12 },
+  { title: 'Kancil Menyeberangi Sungai', author: 'Cerita Rakyat',          pages: 24,  level: 'Dongeng', progress: 0 },
+  { title: 'Kata Sehari-hari',           author: 'Kosakata Latihan',       pages: 18,  level: 'Latihan', progress: 30 },
 ];
 
 function renderUpload() {
@@ -1797,6 +1797,14 @@ function bindNav(root) {
    latihan baca braille, supaya apa yang dibaca sesuai dengan buku yang dibuka. */
 function openBook(title) {
   STATE.book.title = title;
+  // Sinkronkan metadata dari koleksi agar tidak menyisakan data buku sebelumnya
+  const lib = LIBRARY.find(b => b.title === title);
+  if (lib) {
+    STATE.book.author = lib.author;
+    STATE.book.progress = lib.progress;
+    STATE.book.totalPage = lib.pages;
+    STATE.book.page = Math.max(1, Math.round(lib.progress / 100 * lib.pages));
+  }
   // Pecah judul jadi kata-kata untuk dibaca haptic
   const words = title.split(/\s+/).filter(Boolean);
   if (words.length) {
