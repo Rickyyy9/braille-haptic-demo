@@ -134,7 +134,7 @@ const svg = (name, cls = 'w-5 h-5', stroke = 1.75) =>
 /* -------------------------------------------------------------------------
    3. RENDER LAYAR
    ------------------------------------------------------------------------- */
-const main = document.getElementById('appMain');
+let main = document.getElementById('appMain');
 const nav  = document.getElementById('navList');
 
 /* --- Logo mini brand (dipakai di header) --- */
@@ -586,7 +586,8 @@ function renderReader() {
   return `
   <!-- Layar immersive — full blue, dirancang khusus untuk pengguna deafblind -->
   <div id="readerImmersive" class="flex flex-col min-h-full select-none"
-       style="background: linear-gradient(175deg, #2B7BF3 0%, #0B5FCC 40%, #094BA3 75%, #0A3D80 100%);"
+       style="background: linear-gradient(175deg, #2B7BF3 0%, #0B5FCC 40%, #094BA3 75%, #0A3D80 100%);
+              padding-bottom: calc(76px + env(safe-area-inset-bottom));"
        aria-label="Layar baca haptic braille. Ketuk sekali untuk mulai/jeda. Geser kanan 2 jari = kata berikutnya. Geser kiri 2 jari = keluar.">
 
     <!-- Dekorasi cahaya -->
@@ -1519,7 +1520,7 @@ function renderProfile() {
     <section class="px-5 mt-4 rise" aria-labelledby="lbl-short">
       <h2 id="lbl-short" class="text-[15px] font-bold text-ink-900 tracking-[-0.012em]">Pintasan</h2>
       <div class="surface mt-3 rounded-2xl divide-y divide-line overflow-hidden">
-        ${profileLinkRow('shield', 'Mode Aksesibilitas', 'access')}
+        ${profileLinkRow('shield', 'Mode Aksesibilitas', null, { toggle: 'focus' })}
         ${profileLinkRow('users', 'Kondisi Pendamping', 'companion')}
         ${profileLinkRow('phone', 'Kontak Darurat', 'contacts')}
         ${profileLinkRow('book2', 'Koleksi Buku', 'upload')}
@@ -1553,16 +1554,23 @@ function profileStat(label, value, unit, tone) {
   </div>`;
 }
 
-function profileLinkRow(icon, title, nav) {
+function profileLinkRow(icon, title, nav, opts = {}) {
+  const isToggle = opts.toggle === 'focus';
+  const attrs = isToggle
+    ? `data-toggle="focus" aria-pressed="false"`
+    : `data-nav="${nav}"`;
+  const trailing = isToggle
+    ? `<span data-toggle-label class="shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full bg-surface text-ink-500 border border-line transition-colors">Nonaktif</span>`
+    : `<span class="text-ink-300 shrink-0 transition-transform duration-200 group-hover:translate-x-0.5">${svg('chev','w-4 h-4',2)}</span>`;
   return `
-  <button type="button" data-nav="${nav}"
+  <button type="button" ${attrs}
           class="btn-ghost w-full flex items-center gap-3.5 p-4 text-left hover:bg-surface active:bg-brand-50 group">
     <span class="w-10 h-10 shrink-0 rounded-xl bg-brand-50 text-brand-600 border border-brand-100
                  flex items-center justify-center transition-transform duration-200 group-hover:scale-[1.05]">
       ${svg(icon, 'w-[19px] h-[19px]')}
     </span>
     <span class="min-w-0 flex-1 text-[14px] font-semibold text-ink-900">${title}</span>
-    <span class="text-ink-300 shrink-0 transition-transform duration-200 group-hover:translate-x-0.5">${svg('chev','w-4 h-4',2)}</span>
+    ${trailing}
   </button>`;
 }
 
@@ -1808,6 +1816,8 @@ function bindScreenEvents() {
   // Toggle fokus mode
   main.querySelectorAll('[data-toggle="focus"]').forEach(b => {
     b.setAttribute('aria-pressed', String(focusMode.on));
+    const lbl = b.querySelector('[data-toggle-label]');
+    if (lbl) lbl.textContent = focusMode.on ? 'Aktif' : 'Nonaktif';
     b.addEventListener('click', () => focusMode.toggle());
   });
 
@@ -2520,7 +2530,7 @@ function bindReaderGestures(status, onStop, onToggle) {
   }
 
   /* ---------- inti gestur: dipakai oleh touch & mouse ---------- */
-  function handleGestureEnd(dx, dy, dt, numFingers, isLong) {
+  function handleGestureEnd(dx, dy, dt, numFingers, isLong, target) {
     if (isLong) { saveBookmark(); return; }
 
     const absDx = Math.abs(dx), absDy = Math.abs(dy);
@@ -2550,6 +2560,7 @@ function bindReaderGestures(status, onStop, onToggle) {
 
     /* --- tap (1 sentuh): SELALU mulai/jeda --- */
     if (absDx < 20 && absDy < 20 && dt < 600) {
+      if (target && target.closest && target.closest('button, a, input, label, select, [role="button"]')) return;
       // Debounce sangat pendek hanya untuk mencegah tap ganda tak sengaja
       // (mis. jari memantul). Semua tap lain = toggle mulai/jeda.
       const now = Date.now();
@@ -2576,7 +2587,7 @@ function bindReaderGestures(status, onStop, onToggle) {
     if (didLongPress) return;
     const dx = e.changedTouches[0].clientX - startX;
     const dy = e.changedTouches[0].clientY - startY;
-    handleGestureEnd(dx, dy, Date.now() - startTime, fingers, false);
+    handleGestureEnd(dx, dy, Date.now() - startTime, fingers, false, e.target);
   }, { passive: true });
 
   /* ==================== MOUSE EVENTS ==================== */
@@ -2617,7 +2628,7 @@ function bindReaderGestures(status, onStop, onToggle) {
     if (didLongPress) return;
     const dx = e.clientX - startX;
     const dy = e.clientY - startY;
-    handleGestureEnd(dx, dy, Date.now() - startTime, fingers, false);
+    handleGestureEnd(dx, dy, Date.now() - startTime, fingers, false, e.target);
   });
 
   // Mouse meninggalkan area = batalkan
@@ -2873,6 +2884,8 @@ function renderShot(screenId, centered = false) {
         <div class="${fullBleed ? 'screen-fill' : ''}">${html}</div>
       </div>
     </div>`;
+
+  main = document.body;
 
   // Panggil binder event supaya kontrol interaktif tetap ter-endow (opsional)
   try {
