@@ -1273,45 +1273,10 @@ img, video { max-width: 100%; height: auto; }
 
 body.frozen { width: 360px; }
 </style>
-<style>
-/* ==== BOTTOM NAV â€” disuntik agar tampil saat import ke Figma ==== */
-.shot-frame { position: relative; }
-
-.bh-nav {
-  position: absolute; left: 0; right: 0; bottom: 0; z-index: 40;
-  background: #fff; border-top: 1px solid rgb(220 229 239);
-  box-shadow: 0 -6px 18px -14px rgba(11, 22, 32, 0.35);
-}
-.bh-nav ul { display: flex; align-items: stretch; margin: 0; padding: 0; list-style: none; }
-.bh-nav li { flex: 1; }
-.bh-nav .item {
-  position: relative; width: 100%; min-height: 62px;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
-  padding: 9px 0 7px; border: 0; background: none; cursor: pointer;
-  color: rgb(74 91 109); font-family: inherit;
-}
-.bh-nav .item .ind {
-  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
-  width: 36px; height: 3px; border-radius: 9999px; background: transparent;
-}
-.bh-nav .item.on { color: rgb(11 95 204); }
-.bh-nav .item.on .ind { background: rgb(11 95 204); }
-.bh-nav .item .lbl { font-size: 10.5px; line-height: 1; font-weight: 600; letter-spacing: -0.005em; }
-.bh-nav .item.on .lbl { font-weight: 800; }
-.bh-nav .item svg { width: 22px; height: 22px; }
-</style>
 </head>
 <body class="shot-body frozen">
 
     <div class="shot-frame" data-screen="reader">
-    <nav class="bh-nav" aria-label="Navigasi utama">
-      <ul>
-      <li><button type="button" class="item"><span class="ind"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h3.5v-5.5h5V21H18a1 1 0 0 0 1-1V9.5"/></svg><span class="lbl">Home</span></button></li>
-      <li><button type="button" class="item"><span class="ind"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19a1 1 0 0 1 1 1v13"/><path d="M6.5 17H20v2.5A2.5 2.5 0 0 1 17.5 22H6.5A2.5 2.5 0 0 1 4 19.5v-14"/></svg><span class="lbl">Library</span></button></li>
-      <li><button type="button" class="item"><span class="ind"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="6" r="1.6"/><circle cx="8" cy="12" r="1.6"/><circle cx="8" cy="18" r="1.6"/><circle cx="16" cy="6" r="1.6"/><circle cx="16" cy="12" r="1.6"/><circle cx="16" cy="18" r="1.6"/></svg><span class="lbl">Latihan</span></button></li>
-      <li><button type="button" class="item"><span class="ind"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20.5c1.2-3.6 3.8-5.5 7-5.5s5.8 1.9 7 5.5"/></svg><span class="lbl">Profil</span></button></li>
-      </ul>
-    </nav>
       <div class="shot-scroll ">
         <div class="">
   <!-- Layar immersive — full blue, dirancang khusus untuk pengguna deafblind -->
